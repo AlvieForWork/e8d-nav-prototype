@@ -406,17 +406,15 @@
       { id: "subscription", label: "訂閱方案", phase2: true, tabs: ["合約概要", "使用扣款紀錄"] },
       { id: "invoice", label: "發票管理", phase2: true, tabs: [] },
       { id: "sub-points", label: "子帳號點數管理", tabs: ["立即撥點", "預約撥點"] },
-      { id: "points-schedule-report", label: "點數預約撥點報表", tabs: [] }
+      { id: "points-schedule-report", label: "撥點查詢", tabs: [] }
     ]},
     { id: "org", label: "組織與子帳號", kind: "group", icon: "org", children: [
       { id: "org-tree", label: "公司組織樹", tabs: [] },
       { id: "sub-account", label: "子帳號管理", tabs: ["部門維護", "部門主管", "部門所屬帳號"] }
     ]},
     { id: "settings", label: "設定", kind: "group", icon: "gear", children: [
-      { id: "notify-settings", label: "通知設定", phase2: true,
-        tabs: ["帳務通知", "到期提醒", "使用量提醒", "系統更新", "行銷資訊"] },
       { id: "account-settings", label: "帳戶設定", tabs: ["公司資訊", "預約發送代表號", "個人資料", "密碼"] },
-      { id: "advanced-settings", label: "進階設定", tabs: ["回覆轉寄", "國際簡訊", "發送回報設定"] }
+      { id: "advanced-settings", label: "進階設定", tabs: ["點數預警設定", "回覆轉寄", "國際簡訊", "發送回報設定", "發票資訊"] }
     ]}
   ];
 
@@ -548,13 +546,17 @@
     if (child.tabs && child.tabs.length > 0) {
       let tabsHtml = '<div class="tabbar">';
       child.tabs.forEach(function (t, i) {
-        tabsHtml += '<button class="tab' + (i === state.activeTabIndex ? " active" : "") + '" data-tab="' + i + '">' + t + '</button>';
+        const label = typeof t === "string" ? t : t.label;
+        const tabIsPhase2 = typeof t === "object" && t.phase2;
+        tabsHtml += '<button class="tab' + (i === state.activeTabIndex ? " active" : "") + '" data-tab="' + i + '">' + label +
+          (tabIsPhase2 ? '<span class="p2-badge" style="margin-left:5px;">P2</span>' : '') + '</button>';
       });
       tabsHtml += '</div>';
       html += tabsHtml;
       if (child.detail) html += '<div class="detail-note">' + child.detail + '</div>';
       if (child.flag) html += '<div class="flag-note">' + icon("flag") + '<div>' + child.flag + '</div></div>';
-      const activeTabLabel = child.tabs[state.activeTabIndex];
+      const activeTab = child.tabs[state.activeTabIndex];
+      const activeTabLabel = typeof activeTab === "string" ? activeTab : activeTab.label;
       html += '<div class="placeholder-card"><div class="big">〔內容區〕' + activeTabLabel + '</div>此 Tab 對應原架構圖中的第三層節點，實際頁面內容之後再設計</div>';
     } else {
       if (child.detail) html += '<div class="detail-note">' + child.detail + '</div>';
