@@ -7,20 +7,39 @@
 <title>E8D 後台導覽結構原型</title>
 <style>
   :root {
-    --bg: #f7f8fc;
-    --surface: #ffffff;
-    --surface-2: #f1f2f9;
-    --border: #e6e8f2;
-    --text: #20253d;
-    --text-muted: #6b7085;
-    --accent: #4c50d6;
-    --accent-contrast: #ffffff;
-    --accent-soft: #ececfb;
-    --phase2: #b1690b;
-    --phase2-soft: #fdf1e0;
-    --shadow: 0 1px 2px rgba(30,32,60,0.04), 0 4px 14px rgba(30,32,60,0.06);
-    --font-ui: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Segoe UI", Roboto, sans-serif;
+    /* ===== E8D Design System tokens ===== */
+    --bg: #FCF8F2;           /* 實驗值：暖米白，非 E8D 現有 token */
+    --surface: #FFFFFF;      /* color/bg/surface */
+    --surface-2: #F3EDE4;    /* 實驗值：暖灰，取代原本偏藍的 neutral/100 */
+    --border: #E7E0D5;       /* 實驗值：暖灰邊框，取代原本偏藍的 neutral/200 */
+    --text: #2C2324;         /* 實驗值：暖黑，取代原本偏藍的 neutral/700 */
+    --text-muted: #79706A;   /* 實驗值：暖中灰，取代原本偏藍的 neutral/500 */
+    --text-disabled: #A79E97;/* 實驗值：暖淺灰，取代原本偏藍的 neutral/400 */
+    --accent: #FF6416;       /* color/bg/primary · primary/700 */
+    --accent-hover: #FB5C13; /* primary/800 */
+    --accent-active: #F04D0A;/* primary/900 */
+    --accent-contrast: #FFFFFF; /* color/text/on-brand */
+    --accent-soft: #FFEADE;  /* primary/75 · bg/selected 同款淡橘 */
+    --phase2: #FE9B0E;       /* color/text/warning */
+    --phase2-soft: #FFF7E1;  /* color/bg/warning */
+    --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-full: 999px;
+    /* 儀表板卡片專用：仿 Horizon UI 的大圓角＋柔擴散陰影（比 E8D 設計系統定案的 12px 上限大） */
+    --radius-xl: 20px;
+    --shadow-card: 0 18px 40px rgba(44,35,36,.07), 0 2px 8px rgba(44,35,36,.04);
+    --shadow-sm: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+    --shadow-md: 0 4px 8px rgba(16,24,40,.06), 0 2px 4px rgba(16,24,40,.04);
+    --shadow-lg: 0 12px 28px rgba(16,24,40,.14), 0 4px 10px rgba(16,24,40,.08);
+    --shadow: var(--shadow-md); /* 沿用既有變數名稱，映射到 md 供 popover 使用 */
+    --font-ui: "Inter", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
     --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+    /* chart 進場動畫：時長／easing 統一由這兩個 token 控制，不要各 chart 各自寫死 */
+    --chart-anim-duration: 700ms;
+    --chart-anim-easing: ease-out;
+    /* KPI 數字 count-up 專用（1-1.5s 區間內，比 chart 進場動畫慢，數字用同一顆 ease-out） */
+    --kpi-anim-duration: 1200ms;
+    /* 側邊選單展開箭頭旋轉：互動動畫，比進場動畫快很多 */
+    --nav-chev-duration: 180ms;
+    --nav-chev-easing: ease;
   }
 
   * { box-sizing: border-box; }
@@ -46,28 +65,48 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    transition: width .12s ease-out;
+  }
+  .sidebar.collapsed {
+    width: 0; min-width: 0; border-right: none; overflow: hidden;
   }
   .sidebar-brand {
-    height: 56px;
+    height: 68px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0 18px;
+    padding: 0 22px;
     border-bottom: 1px solid var(--border);
-    font-weight: 600;
-    font-size: 15px;
     flex-shrink: 0;
   }
-  .sidebar-brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
-  .nav-scroll { padding: 10px 10px 20px; display: flex; flex-direction: column; gap: 2px; }
+  .nav-scroll { padding: 16px 14px 20px; display: flex; flex-direction: column; gap: 4px;
+    transition: opacity .08s ease; }
+  .points-card, .sidebar-hint { transition: opacity .08s ease; }
+  .sidebar.collapsed .nav-scroll,
+  .sidebar.collapsed .points-card,
+  .sidebar.collapsed .sidebar-hint { opacity: 0; }
+
+  /* ---------- topbar 品牌區（收合鈕常駐；logo＋分隔線只在側欄收合時才出現） ---------- */
+  .topbar-brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .brand-divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+  .topbar-brand .brand-logo,
+  .topbar-brand .brand-divider { display: none; }
+  .shell.sidebar-collapsed .topbar-brand .brand-logo { display: block; }
+  .shell.sidebar-collapsed .topbar-brand .brand-divider { display: block; }
+  .sidebar-toggle {
+    width: 44px; height: 44px; border-radius: var(--radius-md); border: none; background: transparent;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .sidebar-toggle:hover { background: var(--surface-2); color: var(--text); }
+  .sidebar-toggle .ico { width: 21px; height: 21px; }
 
   .nav-row {
     display: flex;
     align-items: center;
     gap: 10px;
     width: 100%;
-    padding: 9px 12px;
-    border-radius: 999px;
+    padding: 11px 14px;
+    border-radius: var(--radius-md);
     border: none;
     background: transparent;
     text-align: left;
@@ -75,20 +114,25 @@
     color: var(--text);
     transition: background .12s ease;
   }
-  .nav-row:hover { background: var(--surface-2); }
+  .nav-row:hover { background: var(--accent-soft); }
   .nav-row.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .nav-row .ico { flex-shrink: 0; width: 18px; height: 18px; opacity: .85; }
   .nav-row.active .ico { opacity: 1; }
-  .nav-row .label { flex: 1; font-size: 13.5px; }
-  .nav-row .chev { width: 14px; height: 14px; flex-shrink: 0; opacity: .55; transition: transform .15s ease; }
-  .nav-row[aria-expanded="true"] .chev { transform: rotate(90deg); }
+  .nav-row .label { flex: 1; font-size: 15px; }
+  /* 預設指下（暗示點了會往下展開），展開後轉 180 度變指上（暗示點了會收合回去）——
+     跟子項目往下展開的方向一致，不是 360 度繞一圈的裝飾轉場 */
+  .nav-row .chev { width: 14px; height: 14px; flex-shrink: 0; opacity: .55; transition: transform var(--nav-chev-duration) var(--nav-chev-easing); }
+  .nav-row[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-row .chev { transition: none; }
+  }
   .nav-row .ext-mark { width: 12px; height: 12px; opacity: .5; flex-shrink: 0; }
 
   .nav-group-children {
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    padding: 2px 0 6px 14px;
+    gap: 2px;
+    padding: 4px 0 8px 14px;
     margin-left: 15px;
     border-left: 1px solid var(--border);
   }
@@ -96,16 +140,16 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 7px 12px;
-    border-radius: 999px;
+    padding: 9px 12px;
+    border-radius: var(--radius-md);
     border: none;
     background: transparent;
     text-align: left;
     cursor: pointer;
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 14px;
   }
-  .nav-child:hover { background: var(--surface-2); color: var(--text); }
+  .nav-child:hover { background: var(--accent-soft); color: var(--text); }
   .nav-child.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .nav-child .label { flex: 1; }
   .p2-badge {
@@ -115,53 +159,83 @@
     color: var(--phase2);
     background: var(--phase2-soft);
     padding: 1px 5px;
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     flex-shrink: 0;
   }
 
   /* ---------- 側欄點數卡（全域元件） ---------- */
+  /* 漸層定案（2026-07-28）：D 版 mesh — feralui 的 radial mesh 結構 + E8D primary 色階，
+     淺點 #FFF1CF／#FFC08E、主色橘 #FF6416、底色 #F9935C；文字沿用 --text（neutral/700 暖黑）*/
   .points-card {
-    margin: auto 10px 0;
-    border-radius: 14px;
-    background: linear-gradient(160deg, #5a5edd 0%, var(--accent) 55%, #3a3eb8 100%);
-    color: #fff;
-    padding: 14px 14px 12px;
-    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    margin: auto 14px 16px;
+    border-radius: var(--radius-lg);
+    background: #F9935C;
+    color: var(--text);
+    padding: 18px 18px 16px;
+    box-shadow: var(--shadow-lg);
+  }
+  .points-card > * { position: relative; z-index: 2; }
+  .points-card::before {
+    content: ''; position: absolute; inset: -14px; z-index: 1; pointer-events: none;
+    background:
+      radial-gradient(66% 50% at 6% 6%, #FFF1CF 0%, #FFF1CF 16%, #FFF1CF00 66%),
+      radial-gradient(58% 64% at 94% 14%, #FFC08E 0%, #FFC08E00 70%),
+      radial-gradient(88% 78% at 40% 104%, #FF6416 0%, #FF6416 26%, #FF641600 76%),
+      radial-gradient(130% 120% at 30% 20%, #F9935C, #F9935C);
+    filter: blur(7px);
+  }
+  .points-card .pc-silk {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(114deg,
+      rgba(255,255,255,0) 18%, rgba(255,255,255,.62) 28%,
+      rgba(255,255,255,.12) 35%, rgba(255,255,255,0) 42%);
   }
   .points-card .pc-head {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
     padding-bottom: 10px; margin-bottom: 10px;
-    border-bottom: 1px solid rgba(255,255,255,.22);
+    border-bottom: 1px solid rgba(44,35,36,.16);
   }
   .points-card .pc-name { font-weight: 700; font-size: 14px; }
   .points-card .pc-plan {
     font-size: 10.5px; font-weight: 700; letter-spacing: .02em;
-    background: rgba(255,255,255,.24); padding: 2px 9px; border-radius: 999px;
+    background: rgba(44,35,36,.12); padding: 2px 9px; border-radius: 999px;
   }
   .points-card .pc-label {
     display: flex; align-items: center; gap: 5px;
-    font-size: 11.5px; opacity: .85; margin-bottom: 2px;
+    font-size: 11.5px; color: rgba(44,35,36,.72); margin-bottom: 2px;
   }
-  .points-card .pc-label .ico { width: 12px; height: 12px; opacity: .8; }
+  .points-card .pc-label .ico { width: 12px; height: 12px; opacity: .7; }
   .points-card .pc-value { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
-  .points-card .pc-value .unit { font-size: 11.5px; font-weight: 500; opacity: .8; margin-left: 3px; }
+  .points-card .pc-value .unit { font-size: 11.5px; font-weight: 500; opacity: .7; margin-left: 3px; }
   .points-card .pc-usage-row {
     display: flex; align-items: baseline; justify-content: space-between;
-    font-size: 11.5px; margin-bottom: 5px;
+    font-size: 11.5px; font-weight: 500; margin-bottom: 5px; color: rgba(44,35,36,.75);
   }
-  .points-card .pc-usage-row .num { opacity: .85; font-variant-numeric: tabular-nums; }
+  .points-card .pc-usage-row .num { font-variant-numeric: tabular-nums; }
   .points-card .pc-bar {
-    height: 5px; border-radius: 999px; background: rgba(255,255,255,.25);
+    height: 5px; border-radius: 999px; background: rgba(44,35,36,.18);
     overflow: hidden; margin-bottom: 12px;
   }
   .points-card .pc-bar span { display: block; height: 100%; width: 62%; border-radius: 999px; background: #fff; }
   .points-card .pc-topup {
-    width: 100%; padding: 8px 0; border-radius: 9px;
-    border: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.14);
-    color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
-    transition: background .12s ease;
+    position: relative;
+    width: 100%; padding: 9px 0; border-radius: var(--radius-md);
+    border: none; background: #fff;
+    color: var(--accent); font-weight: 700; font-size: 13px; cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.10);
+    overflow: hidden;
   }
-  .points-card .pc-topup:hover { background: rgba(255,255,255,.26); }
+  .points-card .pc-topup span { position: relative; z-index: 2; }
+  .points-card .pc-topup::before {
+    content: ""; position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: #FFF4EC;
+    transition: left .35s ease;
+  }
+  .points-card .pc-topup:hover::before { left: 0; }
+  .points-card .pc-topup:active { transform: scale(.94); }
 
   .sidebar-hint {
     padding: 12px 16px 16px;
@@ -172,123 +246,213 @@
   /* ---------- Topbar ---------- */
   .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .topbar {
-    height: 56px;
+    height: 68px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 24px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
     gap: 12px;
   }
-  .crumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); min-width: 0; }
-  .crumb .current { color: var(--text); font-weight: 600; font-size: 14.5px; }
-  .crumb .sep { opacity: .5; }
-  .hamburger { display: none; }
-  .topbar-actions { display: flex; align-items: center; gap: 4px; position: relative; }
+  .topbar-actions { display: flex; align-items: center; gap: 6px; position: relative; }
   .icon-btn {
-    width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent;
+    width: 44px; height: 44px; border-radius: var(--radius-md); border: none; background: transparent;
     display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted);
     position: relative;
   }
   .icon-btn:hover { background: var(--surface-2); color: var(--text); }
-  .icon-btn .ico { width: 17px; height: 17px; }
+  .icon-btn .ico { width: 21px; height: 21px; }
   .avatar-btn {
-    width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--accent-contrast);
-    border: none; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
-    cursor: pointer; margin-left: 4px;
+    width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: var(--accent-contrast);
+    border: none; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-left: 8px;
   }
   .popover {
-    position: absolute; top: 40px; right: 0; width: 240px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow);
+    position: absolute; top: 50px; right: 0; width: 240px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
     padding: 12px 14px; font-size: 12.5px; color: var(--text-muted); z-index: 20; display: none;
   }
   .popover.open { display: block; }
   .popover .t { color: var(--text); font-weight: 600; font-size: 13px; margin-bottom: 4px; }
   .popover button.logout {
-    margin-top: 8px; width: 100%; padding: 7px 0; border-radius: 7px; border: 1px solid var(--border);
+    margin-top: 8px; width: 100%; padding: 7px 0; border-radius: var(--radius-md); border: 1px solid var(--border);
     background: var(--surface-2); color: var(--text); cursor: pointer; font-size: 12.5px;
   }
   .popover button.logout:hover { background: var(--bg); }
 
   /* ---------- Content ---------- */
-  .content { flex: 1; overflow-y: auto; padding: 22px 28px 40px; }
+  .content { flex: 1; overflow-y: auto; padding: 32px 40px 48px; }
   .proto-note {
     display: flex; gap: 10px; align-items: flex-start; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 20px;
+    border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 28px;
     font-size: 12.5px; color: var(--text-muted); max-width: 640px;
   }
   .proto-note .ico { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; color: var(--accent); }
   .proto-note b { color: var(--text); }
 
-  .page-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-  .page-head h1 { font-size: 19px; font-weight: 700; margin: 0; text-wrap: balance; }
-  .page-sub { font-size: 12.5px; color: var(--text-muted); margin: 4px 0 18px; }
+  .page-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .page-head h1 { font-size: 28px; line-height: 36px; font-weight: 700; margin: 0; text-wrap: balance; }
+  .page-sub { font-size: 13.5px; color: var(--text-muted); margin: 8px 0 24px; }
 
-  .tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; flex-wrap: wrap; }
+  .tabbar { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 22px; flex-wrap: wrap; }
   .tab {
-    padding: 9px 14px; font-size: 13px; color: var(--text-muted); background: none; border: none;
+    padding: 11px 16px; font-size: 14px; color: var(--text-muted); background: none; border: none;
     border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px; white-space: nowrap;
   }
   .tab:hover { color: var(--text); }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 
   .detail-note {
-    font-size: 12.5px; color: var(--text-muted); margin: -8px 0 16px; max-width: 640px;
+    font-size: 13px; color: var(--text-muted); margin: -6px 0 18px; max-width: 640px;
   }
 
   .flag-note {
     display: flex; gap: 8px; align-items: flex-start; background: var(--phase2-soft);
     border: 1px solid color-mix(in srgb, var(--phase2) 30%, transparent);
-    border-radius: 9px; padding: 10px 12px; margin: 0 0 18px; font-size: 12.5px; color: var(--text);
+    border-radius: var(--radius-md); padding: 10px 12px; margin: 0 0 18px; font-size: 12.5px; color: var(--text);
     max-width: 640px;
   }
   .flag-note .ico { width: 15px; height: 15px; color: var(--phase2); flex-shrink: 0; margin-top: 1px; }
 
   .placeholder-card {
-    border: 1.5px dashed var(--border); border-radius: 12px; padding: 32px 24px; text-align: center;
-    color: var(--text-muted); font-size: 13px; background: var(--surface); max-width: 640px;
+    border: 1.5px dashed var(--border); border-radius: var(--radius-lg); padding: 32px 24px; text-align: center;
+    color: var(--text-muted); font-size: 13.5px; background: var(--surface); max-width: 640px;
   }
-  .placeholder-card .big { font-size: 13.5px; color: var(--text); font-weight: 600; margin-bottom: 4px; }
+  .placeholder-card .big { font-size: 15px; color: var(--text); font-weight: 600; margin-bottom: 6px; }
 
-  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; max-width: 900px; }
-  .kpi-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+  /* ---------- 總覽儀表板（2026-07-28 定案：TailAdmin/Horizon 版面結構 + E8D token） ---------- */
+  /* 12 欄統一格線：兩列都在同一個 1180px 寬度內，且在第 6 欄對齊 —
+     上列 = 統計 3 + 統計 3 + 合約 6，下列 = 趨勢圖 6 + 長條圖 6 */
+  .dash-grid {
+    display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px;
+    max-width: 1180px; align-items: stretch;
   }
-  .kpi-card .k-label { font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-  .kpi-card .k-body { font-size: 12.5px; color: var(--text-muted); }
-  .kpi-card .k-body div + div { margin-top: 3px; }
+  .dash-grid > .span-3 { grid-column: span 3; }
+  .dash-grid > .span-6 { grid-column: span 6; }
+  @media (max-width: 1100px) {
+    .dash-grid > .span-3 { grid-column: span 6; }
+    .dash-grid > .span-6 { grid-column: span 12; }
+  }
+  @media (max-width: 600px) { .dash-grid > .span-3 { grid-column: span 12; } }
+
+  .stat-card {
+    background: var(--surface); border-radius: var(--radius-xl); padding: 22px 24px;
+    box-shadow: var(--shadow-card);
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .stat-card .s-icon {
+    width: 48px; height: 48px; border-radius: 14px; background: var(--accent-soft);
+    display: flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0;
+  }
+  .stat-card .s-icon .ico { width: 22px; height: 22px; }
+  .stat-card .s-label { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+  .stat-card .s-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .stat-card .s-value { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1.1; }
+  .stat-card .s-delta { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .stat-card .s-delta.up { color: #0C9D61; background: #E5F5EC; }
+  .stat-card .s-delta.down { color: #EC2D30; background: #FFEBEE; }
+  .stat-card .s-delta .ico { width: 10px; height: 10px; }
+  .stat-card .s-compare { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
+
+  .chart-card { background: var(--surface); border-radius: var(--radius-xl); padding: 24px 24px 20px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; }
+  .chart-card .cc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .chart-card h3 { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; }
+  .chart-card .cc-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+  .chart-period-tabs { display: flex; gap: 2px; background: var(--surface-2); border-radius: var(--radius-md); padding: 3px; flex-shrink: 0; }
+  .chart-period-tabs button {
+    border: none; background: none; padding: 6px 12px; font-size: 12.5px; font-weight: 600;
+    color: var(--text-muted); border-radius: 6px; cursor: pointer; white-space: nowrap; font-family: inherit;
+  }
+  .chart-period-tabs button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+
+  .chart-wrap { position: relative; margin-top: 16px; flex: 1; display: flex; align-items: center; }
+  .chart-wrap svg { display: block; width: 100%; flex: 1; height: auto; overflow: visible; }
+  .chart-wrap text { font-family: var(--font-ui); }
+  .chart-axis-label { font-size: 10.5px; fill: var(--text-muted); }
+  .chart-grid line { stroke: var(--border); stroke-width: 1; }
+  .chart-crosshair { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; pointer-events: none; }
+  .chart-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; opacity: 0; pointer-events: none; }
+  .chart-hit { fill: transparent; cursor: crosshair; }
+
+  /* 進場動畫：線＋漸層是同一個 <g>（.chart-trend-shape），一起用 scaleY
+     從基準線長到實際高度——線本身真的跟著長上來，不是只有漸層變化。
+     用 @keyframes（不是 transition）——class 只在首次載入時由 JS 加上去，
+     切換 tab 時 renderArea() 重建的新 SVG 不帶這個 class，預設就是完整態，不會播放。
+     2026-07-31 修正：原本線用 stroke-dashoffset 左右畫出、area 用 scaleY 縱向長高，
+     兩個方向不一致，線的動作太細微會被 area 蓋過去，看起來像「線沒動」。改成兩者
+     包同一個 <g> 一起縱向長高 */
+  .chart-trend-shape { transform-box: fill-box; transform-origin: bottom; }
+  .chart-trend-shape.chart-anim-in {
+    animation: chart-grow-trend var(--chart-anim-duration) var(--chart-anim-easing) both;
+  }
+  @keyframes chart-grow-trend {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chart-trend-shape.chart-anim-in { animation: none; }
+  }
+
+  /* SMS/MMS 長條圖進場：每根 bar-mark（SMS＋MMS 一組）各自從基準線 scaleY 長高，
+     全部同時開始（不做逐棒依序長高的演出），沿用發送趨勢圖同一組 token／同一個 keyframe */
+  .bar-mark { transform-box: fill-box; transform-origin: bottom; }
+  .bar-mark.chart-anim-in {
+    animation: chart-grow-trend var(--chart-anim-duration) var(--chart-anim-easing) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bar-mark.chart-anim-in { animation: none; }
+  }
+
+  .chart-tooltip {
+    position: absolute; pointer-events: none; z-index: 5; opacity: 0;
+    background: var(--text); color: #fff; border-radius: 8px; padding: 8px 12px;
+    font-size: 12px; white-space: nowrap; box-shadow: var(--shadow-lg);
+    transform: translate(-50%, calc(-100% - 14px)); transition: opacity .1s ease; left: 0; top: 0;
+  }
+  .chart-tooltip .tt-label { color: rgba(255,255,255,.68); font-size: 11px; margin-bottom: 3px; }
+  .chart-tooltip .tt-row { display: flex; align-items: center; gap: 6px; }
+  .chart-tooltip .tt-row + .tt-row { margin-top: 3px; }
+  .chart-tooltip .tt-key { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .chart-tooltip .tt-value { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: auto; padding-left: 10px; }
+
+  .chart-legend { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+  .chart-legend .lg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+  .chart-legend .lg-key { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  .bar-mark { cursor: pointer; }
+  .bar-mark path { transition: opacity .1s ease; }
+  .bar-mark:hover path, .bar-mark:focus path { opacity: .78; }
+  .bar-mark:focus { outline: none; }
+
+  .contract-card { background: var(--surface); border-radius: var(--radius-xl); padding: 24px; box-shadow: var(--shadow-card); }
+  .contract-card h3 { font-size: 15px; font-weight: 700; margin: 0 0 6px; color: var(--text); }
+  .contract-card .cc-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
+  .contract-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .contract-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .contract-row dt { margin: 0; color: var(--text-muted); }
+  .contract-row dd { margin: 0; color: var(--text); font-weight: 600; text-align: right; }
+
 
   .ext-card {
-    display: flex; gap: 14px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px; max-width: 560px;
+    display: flex; gap: 16px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 26px; max-width: 560px; box-shadow: var(--shadow-sm);
   }
   .ext-card .ico { width: 22px; height: 22px; color: var(--accent); flex-shrink: 0; margin-top: 2px; }
-  .ext-card h2 { font-size: 15px; margin: 0 0 6px; }
-  .ext-card p { margin: 0; font-size: 12.5px; color: var(--text-muted); }
+  .ext-card h2 { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
+  .ext-card p { margin: 0; font-size: 13.5px; color: var(--text-muted); }
 
   .toast {
     position: fixed; bottom: 22px; right: 22px; background: var(--text); color: var(--bg);
-    padding: 10px 16px; border-radius: 8px; font-size: 12.5px; box-shadow: var(--shadow);
+    padding: 10px 16px; border-radius: var(--radius-md); font-size: 12.5px; box-shadow: var(--shadow-lg);
     opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .18s ease, transform .18s ease;
     z-index: 50;
   }
   .toast.show { opacity: 1; transform: translateY(0); }
 
-  .backdrop { display: none; }
-
   @media (max-width: 767px) {
-    .hamburger { display: flex; }
-    .sidebar {
-      position: fixed; top: 0; left: 0; bottom: 0; z-index: 40;
-      transform: translateX(-100%); transition: transform .2s ease; box-shadow: var(--shadow);
-    }
-    .shell.sidebar-open .sidebar { transform: translateX(0); }
-    .backdrop {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 30;
-    }
-    .shell.sidebar-open .backdrop { display: block; }
     .content { padding: 18px 16px 32px; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -301,48 +465,88 @@
 <div class="shell" id="shell">
   <aside class="sidebar" id="sidebar" aria-label="主導覽">
     <div class="sidebar-brand">
-      <span class="dot"></span> E8D
+      <svg class="brand-logo" width="128" height="20" viewBox="0 0 160 25" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="EVERY8D">
+        <g>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M0.93658 22.9714C1.80001 23.8514 3.00266 24.284 4.5445 24.284V24.2989H17.3418L18.2824 21.0173H5.50045C5.1304 21.0173 4.82203 20.898 4.59076 20.6742C4.35948 20.4505 4.28239 20.182 4.3749 19.8986L5.963 14.3795C6.05551 14.0961 6.27137 13.8276 6.64141 13.6038C6.99604 13.3801 7.36608 13.2607 7.73612 13.2607H20.518L21.4586 9.97911H8.67665C7.1348 9.97911 5.68547 10.3968 4.31322 11.2768C2.94098 12.142 2.07755 13.1712 1.73834 14.3646L0.150239 19.8836C-0.204386 21.062 0.0731463 22.1062 0.93658 22.9714ZM8.5225 15.4833L7.58197 18.7649H18.9145L19.8551 15.4833H8.5225Z" fill="#3E3A39"/>
+          <path d="M39.1589 10.0686H44.4937L32.0048 24.1945H27.148L22.8925 10.0686H28.3968L30.6479 20.7936L39.1589 10.0686Z" fill="#3E3A39"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M43.5686 22.9714C44.4475 23.8514 45.6501 24.284 47.192 24.284V24.3138H59.9739L60.9298 21.0322H48.1479C47.7779 21.0322 47.4849 20.9129 47.2537 20.6891C47.0224 20.4654 46.9607 20.1969 47.0378 19.9135L48.6259 14.3944C48.703 14.111 48.9189 13.8425 49.2889 13.6187C49.6435 13.395 50.0136 13.2757 50.3836 13.2757H63.1655L64.106 9.99403H51.3241C49.7823 9.99403 48.333 10.4117 46.9607 11.2918C45.5885 12.1569 44.725 13.1862 44.3858 14.3795L42.7823 19.8986C42.4431 21.077 42.7052 22.1211 43.5686 22.9714ZM51.17 15.4833L50.2294 18.7649H61.562L62.5025 15.4833H51.17Z" fill="#3E3A39"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M85.0906 11.426C84.5818 10.9934 83.9034 10.6653 83.0553 10.4415C82.2227 10.2178 80.9584 10.0984 79.2624 10.1134H67.4673L63.3968 24.2243H68.4232L70.0267 18.6903H75.084C76.5333 18.6903 77.4738 18.8395 77.9056 19.1378C78.3373 19.4361 78.4452 20.0328 78.1985 20.9278L77.8439 22.2404C77.736 22.6581 77.6897 23.0459 77.7051 23.4487C77.7196 23.631 77.7614 23.8529 77.8176 24.1515C77.8212 24.1705 77.8248 24.1898 77.8285 24.2094H83.5025L83.6104 23.8514C83.1633 23.6724 82.9166 23.4039 82.8857 23.0459C82.8703 22.8222 82.9474 22.3747 83.1324 21.7333L83.41 20.7935C83.6875 19.7941 83.6721 19.0632 83.3329 18.571C82.9937 18.0937 82.2998 17.7208 81.236 17.4523C82.6853 17.1838 83.7954 16.7213 84.5663 16.0799C85.3373 15.4236 85.8307 14.7673 86.0157 14.0961C86.1699 13.5441 86.1699 13.0519 85.9848 12.6193C85.8152 12.1867 85.5069 11.784 85.0906 11.426ZM70.7052 16.3186L71.7999 12.5149H77.5047C78.584 12.5149 79.3549 12.5895 79.8329 12.7685C80.6809 13.0668 80.9893 13.6486 80.7426 14.4988C80.5113 15.2894 79.8637 15.8264 78.8153 16.0949C78.214 16.244 77.3505 16.3186 76.2558 16.3186H70.7052Z" fill="#3E3A39"/>
+          <path d="M100.386 18.9141H98.9364L97.3483 24.4481H93.1236L94.7117 18.9141H93.2624C91.7205 18.9141 90.5179 18.4815 89.639 17.6163C88.7756 16.7512 88.5135 15.722 88.8527 14.5286L90.117 10.1283H94.3417L93.0773 14.5286C92.9848 14.827 93.0619 15.0805 93.2932 15.3043C93.5245 15.528 93.8328 15.6474 94.2029 15.6474H101.326C101.727 15.6474 102.097 15.543 102.436 15.3192C102.776 15.1104 103.007 14.8419 103.084 14.5286L104.348 10.1283H108.573L107.309 14.5286C106.954 15.7369 106.106 16.781 104.765 17.6462C103.423 18.4964 101.958 18.9141 100.386 18.9141" fill="#3E3A39"/>
+          <path d="M114.386 18.2279C114.771 16.9302 117.284 15.8562 120.198 15.707L121.956 9.62112C119.135 9.48687 117.223 8.41289 117.608 7.11515C117.978 5.81742 120.507 4.72852 123.405 4.59427L124.731 0H119.905C118.734 0 117.608 0.268496 116.544 0.820406C115.465 1.37232 114.54 2.13305 113.753 3.11754C112.967 4.08711 112.381 5.23568 112.011 6.5185C111.456 8.47255 111.549 10.0537 112.32 11.2321C112.551 11.5752 112.782 11.8288 113.029 11.9928C113.229 12.142 113.568 12.3061 114.031 12.4851L114.016 12.5597C113.368 12.7983 112.89 13.0221 112.566 13.216C112.227 13.4099 111.857 13.6933 111.456 14.0513C110.762 14.648 110.161 15.3341 109.652 16.1247C109.128 16.9004 108.758 17.7058 108.527 18.5113C108.203 19.645 108.11 20.7041 108.249 21.6736C108.403 22.6432 108.773 23.4039 109.344 23.9708C109.914 24.5376 110.639 24.8061 111.518 24.8061H117.608L118.78 20.7339C115.927 20.5996 114.016 19.5257 114.386 18.2279" fill="url(#p0)"/>
+          <path d="M132.271 16.4529C132.256 15.7816 132.163 15.185 131.947 14.6629C131.793 14.1408 131.516 13.6933 131.115 13.3204C130.791 12.9922 130.313 12.7387 129.681 12.5895L129.696 12.5149C130.113 12.4105 130.452 12.3061 130.745 12.1868C131.007 12.0823 131.315 11.9183 131.654 11.6945C132.502 11.1426 133.258 10.4415 133.89 9.59129C134.522 8.72613 134.969 7.80131 135.262 6.81683C135.632 5.50418 135.74 4.35561 135.571 3.29654C135.37 2.2673 134.938 1.46181 134.245 0.880072C133.535 0.298329 132.641 0 131.562 0H126.32L124.994 4.6241C127.661 4.81802 129.45 5.86217 129.079 7.11515C128.709 8.36814 126.335 9.41229 123.544 9.60621L121.771 15.722C124.439 15.9159 126.227 16.96 125.872 18.2279C125.518 19.4809 123.113 20.5251 120.337 20.719L119.165 24.8061H125.425C126.289 24.8061 127.168 24.5227 128.077 23.9708C128.987 23.389 129.789 22.6283 130.483 21.6587C131.176 20.7041 131.685 19.6301 132.024 18.4517C132.179 17.8103 132.271 17.139 132.271 16.4529" fill="url(#p1)"/>
+          <path d="M159.685 6.38425C159.207 4.46003 158.267 2.92363 156.817 1.78998C155.399 0.656327 153.672 0.074585 151.683 0.074585H150.079L147.628 8.54714C151.359 8.56206 153.842 10.4266 153.179 12.7237C152.516 15.0209 148.954 16.8854 145.223 16.9004L142.894 25H144.775C146.117 25 147.597 24.6718 149.201 24.0006C150.804 23.3294 152.269 22.4493 153.641 21.3156C155.029 20.1671 156.231 18.8246 157.249 17.2882C158.251 15.7816 158.991 14.2005 159.469 12.5597C160.101 10.3669 160.163 8.32339 159.685 6.38425" fill="url(#p2)"/>
+          <path d="M132.518 24.9851H141.029L148.198 0.074585H139.703L132.518 24.9851Z" fill="url(#p3)"/>
+        </g>
+        <defs>
+          <linearGradient id="p0" x1="115.341" y1="45.0313" x2="158.871" y2="45.0313" gradientUnits="userSpaceOnUse"><stop stop-color="#E68915"/><stop offset="1" stop-color="#D71718"/></linearGradient>
+          <linearGradient id="p1" x1="115.341" y1="45.1528" x2="158.871" y2="45.1528" gradientUnits="userSpaceOnUse"><stop stop-color="#E68915"/><stop offset="1" stop-color="#D71718"/></linearGradient>
+          <linearGradient id="p2" x1="115.341" y1="44.2476" x2="158.871" y2="44.2476" gradientUnits="userSpaceOnUse"><stop stop-color="#E68915"/><stop offset="1" stop-color="#D71718"/></linearGradient>
+          <linearGradient id="p3" x1="115.341" y1="47.1091" x2="158.871" y2="47.1091" gradientUnits="userSpaceOnUse"><stop stop-color="#E68915"/><stop offset="1" stop-color="#D71718"/></linearGradient>
+        </defs>
+      </svg>
     </div>
     <nav class="nav-scroll" id="navScroll"></nav>
     <div class="points-card" aria-label="點數卡">
+      <div class="pc-silk"></div>
       <div class="pc-head">
         <span class="pc-name">Emma</span>
         <span class="pc-plan">企業帳號</span>
       </div>
       <div class="pc-label">剩餘點數
-        <svg class="ico" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="9" r="6.5"/><path d="M9 8.2v4"/><circle cx="9" cy="5.8" r=".4" fill="currentColor"/></svg>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       </div>
       <div class="pc-value">184<span class="unit">點</span></div>
       <div class="pc-usage-row"><span>本月發送量</span><span class="num">12,480 / 20,000</span></div>
       <div class="pc-bar"><span></span></div>
-      <button class="pc-topup" id="btnTopup">儲值</button>
+      <button class="pc-topup" id="btnTopup"><span>儲值</span></button>
     </div>
-    <div class="sidebar-hint">共 6 個功能群組 · 平台不留存客戶名單</div>
+    <div class="sidebar-hint">平台不留存聯絡人名單</div>
   </aside>
-
-  <div class="backdrop" id="backdrop"></div>
 
   <div class="main-col">
     <header class="topbar">
-      <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-        <button class="icon-btn hamburger" id="hamburgerBtn" aria-label="開啟導覽">
-          <svg class="ico" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 5h14M2 9h14M2 13h14"/></svg>
+      <div class="topbar-brand">
+        <svg class="brand-logo" width="128" height="20" viewBox="0 0 160 25" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="EVERY8D">
+          <g id="logo_every8d">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M0.93658 22.9714C1.80001 23.8514 3.00266 24.284 4.5445 24.284V24.2989H17.3418L18.2824 21.0173H5.50045C5.1304 21.0173 4.82203 20.898 4.59076 20.6742C4.35948 20.4505 4.28239 20.182 4.3749 19.8986L5.963 14.3795C6.05551 14.0961 6.27137 13.8276 6.64141 13.6038C6.99604 13.3801 7.36608 13.2607 7.73612 13.2607H20.518L21.4586 9.97911H8.67665C7.1348 9.97911 5.68547 10.3968 4.31322 11.2768C2.94098 12.142 2.07755 13.1712 1.73834 14.3646L0.150239 19.8836C-0.204386 21.062 0.0731463 22.1062 0.93658 22.9714ZM8.5225 15.4833L7.58197 18.7649H18.9145L19.8551 15.4833H8.5225Z" fill="#3E3A39"/>
+            <path d="M39.1589 10.0686H44.4937L32.0048 24.1945H27.148L22.8925 10.0686H28.3968L30.6479 20.7936L39.1589 10.0686Z" fill="#3E3A39"/>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M43.5686 22.9714C44.4475 23.8514 45.6501 24.284 47.192 24.284V24.3138H59.9739L60.9298 21.0322H48.1479C47.7779 21.0322 47.4849 20.9129 47.2537 20.6891C47.0224 20.4654 46.9607 20.1969 47.0378 19.9135L48.6259 14.3944C48.703 14.111 48.9189 13.8425 49.2889 13.6187C49.6435 13.395 50.0136 13.2757 50.3836 13.2757H63.1655L64.106 9.99403H51.3241C49.7823 9.99403 48.333 10.4117 46.9607 11.2918C45.5885 12.1569 44.725 13.1862 44.3858 14.3795L42.7823 19.8986C42.4431 21.077 42.7052 22.1211 43.5686 22.9714ZM51.17 15.4833L50.2294 18.7649H61.562L62.5025 15.4833H51.17Z" fill="#3E3A39"/>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M85.0906 11.426C84.5818 10.9934 83.9034 10.6653 83.0553 10.4415C82.2227 10.2178 80.9584 10.0984 79.2624 10.1134H67.4673L63.3968 24.2243H68.4232L70.0267 18.6903H75.084C76.5333 18.6903 77.4738 18.8395 77.9056 19.1378C78.3373 19.4361 78.4452 20.0328 78.1985 20.9278L77.8439 22.2404C77.736 22.6581 77.6897 23.0459 77.7051 23.4487C77.7196 23.631 77.7614 23.8529 77.8176 24.1515C77.8212 24.1705 77.8248 24.1898 77.8285 24.2094H83.5025L83.6104 23.8514C83.1633 23.6724 82.9166 23.4039 82.8857 23.0459C82.8703 22.8222 82.9474 22.3747 83.1324 21.7333L83.41 20.7935C83.6875 19.7941 83.6721 19.0632 83.3329 18.571C82.9937 18.0937 82.2998 17.7208 81.236 17.4523C82.6853 17.1838 83.7954 16.7213 84.5663 16.0799C85.3373 15.4236 85.8307 14.7673 86.0157 14.0961C86.1699 13.5441 86.1699 13.0519 85.9848 12.6193C85.8152 12.1867 85.5069 11.784 85.0906 11.426ZM70.7052 16.3186L71.7999 12.5149H77.5047C78.584 12.5149 79.3549 12.5895 79.8329 12.7685C80.6809 13.0668 80.9893 13.6486 80.7426 14.4988C80.5113 15.2894 79.8637 15.8264 78.8153 16.0949C78.214 16.244 77.3505 16.3186 76.2558 16.3186H70.7052Z" fill="#3E3A39"/>
+            <path d="M100.386 18.9141H98.9364L97.3483 24.4481H93.1236L94.7117 18.9141H93.2624C91.7205 18.9141 90.5179 18.4815 89.639 17.6163C88.7756 16.7512 88.5135 15.722 88.8527 14.5286L90.117 10.1283H94.3417L93.0773 14.5286C92.9848 14.827 93.0619 15.0805 93.2932 15.3043C93.5245 15.528 93.8328 15.6474 94.2029 15.6474H101.326C101.727 15.6474 102.097 15.543 102.436 15.3192C102.776 15.1104 103.007 14.8419 103.084 14.5286L104.348 10.1283H108.573L107.309 14.5286C106.954 15.7369 106.106 16.781 104.765 17.6462C103.423 18.4964 101.958 18.9141 100.386 18.9141" fill="#3E3A39"/>
+            <path d="M114.386 18.2279C114.771 16.9302 117.284 15.8562 120.198 15.707L121.956 9.62112C119.135 9.48687 117.223 8.41289 117.608 7.11515C117.978 5.81742 120.507 4.72852 123.405 4.59427L124.731 0H119.905C118.734 0 117.608 0.268496 116.544 0.820406C115.465 1.37232 114.54 2.13305 113.753 3.11754C112.967 4.08711 112.381 5.23568 112.011 6.5185C111.456 8.47255 111.549 10.0537 112.32 11.2321C112.551 11.5752 112.782 11.8288 113.029 11.9928C113.229 12.142 113.568 12.3061 114.031 12.4851L114.016 12.5597C113.368 12.7983 112.89 13.0221 112.566 13.216C112.227 13.4099 111.857 13.6933 111.456 14.0513C110.762 14.648 110.161 15.3341 109.652 16.1247C109.128 16.9004 108.758 17.7058 108.527 18.5113C108.203 19.645 108.11 20.7041 108.249 21.6736C108.403 22.6432 108.773 23.4039 109.344 23.9708C109.914 24.5376 110.639 24.8061 111.518 24.8061H117.608L118.78 20.7339C115.927 20.5996 114.016 19.5257 114.386 18.2279" fill="url(#paint0_linear_268_963)"/>
+            <path d="M132.271 16.4529C132.256 15.7816 132.163 15.185 131.947 14.6629C131.793 14.1408 131.516 13.6933 131.115 13.3204C130.791 12.9922 130.313 12.7387 129.681 12.5895L129.696 12.5149C130.113 12.4105 130.452 12.3061 130.745 12.1868C131.007 12.0823 131.315 11.9183 131.654 11.6945C132.502 11.1426 133.258 10.4415 133.89 9.59129C134.522 8.72613 134.969 7.80131 135.262 6.81683C135.632 5.50418 135.74 4.35561 135.571 3.29654C135.37 2.2673 134.938 1.46181 134.245 0.880072C133.535 0.298329 132.641 0 131.562 0H126.32L124.994 4.6241C127.661 4.81802 129.45 5.86217 129.079 7.11515C128.709 8.36814 126.335 9.41229 123.544 9.60621L121.771 15.722C124.439 15.9159 126.227 16.96 125.872 18.2279C125.518 19.4809 123.113 20.5251 120.337 20.719L119.165 24.8061H125.425C126.289 24.8061 127.168 24.5227 128.077 23.9708C128.987 23.389 129.789 22.6283 130.483 21.6587C131.176 20.7041 131.685 19.6301 132.024 18.4517C132.179 17.8103 132.271 17.139 132.271 16.4529" fill="url(#paint1_linear_268_963)"/>
+            <path d="M159.685 6.38425C159.207 4.46003 158.267 2.92363 156.817 1.78998C155.399 0.656327 153.672 0.074585 151.683 0.074585H150.079L147.628 8.54714C151.359 8.56206 153.842 10.4266 153.179 12.7237C152.516 15.0209 148.954 16.8854 145.223 16.9004L142.894 25H144.775C146.117 25 147.597 24.6718 149.201 24.0006C150.804 23.3294 152.269 22.4493 153.641 21.3156C155.029 20.1671 156.231 18.8246 157.249 17.2882C158.251 15.7816 158.991 14.2005 159.469 12.5597C160.101 10.3669 160.163 8.32339 159.685 6.38425" fill="url(#paint2_linear_268_963)"/>
+            <path d="M132.518 24.9851H141.029L148.198 0.074585H139.703L132.518 24.9851Z" fill="url(#paint3_linear_268_963)"/>
+          </g>
+          <defs>
+            <linearGradient id="paint0_linear_268_963" x1="115.341" y1="45.0313" x2="158.871" y2="45.0313" gradientUnits="userSpaceOnUse"><stop stop-color="#E68915"/><stop offset="1" stop-color="#D71718"/></linearGradient>
+            <linearGradient id="paint1_linear_268_963" x1="115.341" y1="45.1528" x2="158.871" y2="45.1528" gradientUnits="userSpaceOnUse"><stop stop-color="#E68915"/><stop offset="1" stop-color="#D71718"/></linearGradient>
+            <linearGradient id="paint2_linear_268_963" x1="115.341" y1="44.2476" x2="158.871" y2="44.2476" gradientUnits="userSpaceOnUse"><stop stop-color="#E68915"/><stop offset="1" stop-color="#D71718"/></linearGradient>
+            <linearGradient id="paint3_linear_268_963" x1="115.341" y1="47.1091" x2="158.871" y2="47.1091" gradientUnits="userSpaceOnUse"><stop stop-color="#E68915"/><stop offset="1" stop-color="#D71718"/></linearGradient>
+          </defs>
+        </svg>
+        <div class="brand-divider"></div>
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="收合／展開側邊欄">
+          <svg class="ico" id="sidebarToggleIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M9 3v18"/>
+            <path d="m16 15-3-3 3-3"/>
+          </svg>
         </button>
-        <div class="crumb" id="crumb"></div>
       </div>
       <div class="topbar-actions">
         <button class="icon-btn" id="btnAnnounce" title="重要公告" aria-label="重要公告">
-          <svg class="ico" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3a4 4 0 0 0-4 4v2.2L3.6 12h10.8L13 9.2V7a4 4 0 0 0-4-4Z"/><path d="M7.4 14a1.8 1.8 0 0 0 3.2 0"/></svg>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
         </button>
         <div class="popover" id="popAnnounce"><div class="t">重要公告</div>全域元件・出現在 header，不佔用側邊欄空間。</div>
 
         <button class="icon-btn" id="btnFaq" title="常見問題教學" aria-label="常見問題教學">
-          <svg class="ico" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.5"/><path d="M7 7.2a2 2 0 1 1 2.8 1.8c-.7.4-1 .8-1 1.6"/><circle cx="9" cy="12.6" r=".3" fill="currentColor"/></svg>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
         </button>
         <div class="popover" id="popFaq"><div class="t">常見問題教學</div>全域元件・同上，供各頁面共用的說明入口。</div>
 
         <button class="icon-btn" id="btnApi" title="API 文件下載" aria-label="API 文件下載">
-          <svg class="ico" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v8"/><path d="M5.3 8.4 9 12l3.7-3.6"/><path d="M3.2 14.5h11.6"/></svg>
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
         </button>
         <div class="popover" id="popApi"><div class="t">API 文件下載</div>全域元件・給工程師串接用的文件入口。</div>
 
@@ -365,20 +569,32 @@
 (function () {
   "use strict";
 
+  // ---- 全站圖示統一使用 Lucide（viewBox 24、stroke-width 2）----
   const ICONS = {
-    home: '<path d="M3 9.2 9 4l6 5.2"/><path d="M5 8v6.3h8V8"/>',
-    external: '<path d="M7.2 3h5.8v5.8"/><path d="M13 3 6.2 9.8"/><path d="M4 6v7.2c0 .6.4 1 1 1h7.2"/>',
-    send: '<path d="M3 9 15 3 9 15l-1.4-4.4L3 9Z"/>',
-    chart: '<path d="M3 15V3"/><path d="M3 15h12"/><rect x="5" y="9.5" width="1.8" height="3.5" rx=".3"/><rect x="9" y="6" width="1.8" height="7" rx=".3"/><rect x="13" y="11" width="1.8" height="2" rx=".3"/>',
-    users: '<circle cx="6.2" cy="6" r="2"/><circle cx="12" cy="6.4" r="1.7"/><path d="M2.2 15c0-2.6 1.9-4.2 4-4.2s4 1.6 4 4.2"/><path d="M10.6 11c1.8.2 3.2 1.7 3.2 4"/>',
-    card: '<rect x="2" y="4.3" width="14" height="9.6" rx="1.6"/><path d="M2 7.4h14"/>',
-    org: '<rect x="4.2" y="3" width="9.6" height="12" rx="1"/><path d="M6.7 6h1M10.3 6h1M6.7 9h1M10.3 9h1M6.7 12h1M10.3 12h1"/>',
-    gear: '<circle cx="9" cy="9" r="2.6"/><path d="M9 2.3v2M9 13.7v2M2.3 9h2M13.7 9h2M4.4 4.4l1.4 1.4M12.2 12.2l1.4 1.4M13.6 4.4l-1.4 1.4M5.8 12.2l-1.4 1.4"/>',
-    chevRight: '<path d="M6.5 3.5 11 9l-4.5 5.5"/>',
-    flag: '<path d="M4.2 15V3"/><path d="M4.2 3.2h9l-2 3 2 3h-9"/>'
+    home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    send: '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
+    chart: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    card: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+    org: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
+    gear: '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',
+    chevRight: '<path d="m9 18 6-6-6-6"/>',
+    chevDown: '<path d="m6 9 6 6 6-6"/>',
+    stackedMail: '<rect width="16" height="13" x="6" y="4" rx="2"/><path d="m22 7-7.1 3.78c-.57.3-1.23.3-1.8 0L6 7"/><path d="M2 8v11c0 1.1.9 2 2 2h14"/>',
+    flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+    up: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+    down: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>'
   };
   function icon(name, extra) {
-    return '<svg class="ico" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" ' + (extra||'') + '>' + ICONS[name] + '</svg>';
+    // 2026-07-31 修正：extra 若帶 class="..."，原本會跟下面固定寫死的 class="ico"
+    // 重複（HTML 對重複 attribute 只認第一個，後面的整串被丟棄，chev/ext-mark 這類
+    // 附加 class 從沒真的生效過）。這裡先抽出 extra 裡的 class，換掉固定的 "ico"。
+    extra = extra || '';
+    const m = extra.match(/class="([^"]*)"/);
+    const cls = m ? m[1] : 'ico';
+    const rest = m ? extra.replace(m[0], '').trim() : extra;
+    return '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ' + rest + '>' + ICONS[name] + '</svg>';
   }
 
   // ---- IA data, mirrors the E8D TO-BE FigJam tree ----
@@ -418,12 +634,333 @@
     ]}
   ];
 
-  const OVERVIEW_CARDS = [
-    { label: "〔Phase 2〕儀表板", phase2: true, body: ["未來需支援三種計費模式：預付／月結／後付"] },
-    { label: "帳戶餘額 / 本月帳單 / 未付款提醒", body: ["帳務摘要卡片"] },
-    { label: "今日發送量 / 本月總發送 / 目標達成率", body: ["發送量摘要卡片"] },
-    { label: "合約概要", body: ["合約狀態摘要卡片"] }
-  ];
+  // ---- 總覽儀表板資料（2026-07-28 定案，數字彼此對齊：今日/昨日 = SMS+MMS 加總，
+  //      本月總發送量 12,480 與側欄點數卡「本月發送量」一致） ----
+  const DASH = {
+    todaySent: { value: 520, prev: 470, prevLabel: "昨日" },
+    monthSent: { value: 12480, prev: 11980, prevLabel: "上月" },
+    trend: {
+      week: {
+        labels: ["6天前", "5天前", "4天前", "3天前", "2天前", "昨天", "今天"],
+        values: [380, 410, 395, 430, 455, 470, 520],
+        axisMax: 600, ticks: [0, 200, 400, 600]
+      },
+      month: {
+        // 30 天示意資料，逐週微幅攀升
+        values: [420,460,440,480,510,290,260, 440,470,455,495,525,300,270, 455,485,465,505,535,310,280, 470,500,480,520,300,470,500,480,520,500],
+        labelEvery: 5, axisMax: 600, ticks: [0, 200, 400, 600]
+      },
+      quarter: { labels: ["5月", "6月", "7月"], values: [10800, 11980, 12480], axisMax: 15000, ticks: [0, 5000, 10000, 15000] }
+    },
+    smsMms: {
+      labels: ["6天前", "5天前", "4天前", "3天前", "2天前", "昨天", "今天"],
+      sms: [300, 330, 310, 340, 360, 370, 410],
+      mms: [80, 80, 85, 90, 95, 100, 110]
+    },
+    contract: [
+      { label: "簡訊單價（SMS）", value: "NT$0.8 / 則" },
+      { label: "多媒體簡訊單價（MMS）", value: "NT$3.5 / 則" },
+      { label: "合約期間", value: "2026/01/01–2026/12/31" }
+    ]
+  };
+
+  // ---- 儀表板圖表：手刻 SVG（零外部依賴），色彩已用 dataviz skill 的驗證腳本跑過 CVD 檢查 ----
+  function fmtNum(n) { return n.toLocaleString("en-US"); }
+
+  // KPI 數字 count-up：只在首次載入跑，旁邊的百分比 badge 不滾（那是算好的靜態值）
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+  function countUp(el, target, duration) {
+    const start = performance.now();
+    (function tick(now) {
+      const p = Math.min(1, (now - start) / duration);
+      el.textContent = fmtNum(Math.round(target * easeOutCubic(p)));
+      if (p < 1) requestAnimationFrame(tick);
+    })(start);
+  }
+  function initStatCountUp() {
+    const duration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--kpi-anim-duration")) || 1200;
+    document.querySelectorAll(".s-value[data-target]").forEach(function (el) {
+      countUp(el, parseInt(el.getAttribute("data-target"), 10), duration);
+    });
+  }
+
+  function smoothPath(pts) {
+    if (pts.length < 2) return "";
+    if (pts.length === 2) return "M" + pts[0].x + "," + pts[0].y + " L" + pts[1].x + "," + pts[1].y;
+    let d = "M" + pts[0].x + "," + pts[0].y;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6, cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6, cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += " C" + cp1x + "," + cp1y + " " + cp2x + "," + cp2y + " " + p2.x + "," + p2.y;
+    }
+    return d;
+  }
+
+  function roundedTopRectPath(x, y, w, h, r) {
+    if (h <= 0) return "";
+    r = Math.min(r, w / 2, h);
+    return "M" + x + "," + (y + h) +
+      " L" + x + "," + (y + r) +
+      " Q" + x + "," + y + " " + (x + r) + "," + y +
+      " L" + (x + w - r) + "," + y +
+      " Q" + (x + w) + "," + y + " " + (x + w) + "," + (y + r) +
+      " L" + (x + w) + "," + (y + h) + " Z";
+  }
+
+  const AREA_VB = { w: 600, h: 220, left: 46, right: 14, top: 14, bottom: 34 };
+
+  function buildAreaChart(period) {
+    const cfg = DASH.trend[period];
+    const values = cfg.values;
+    const labels = cfg.labels || values.map(function (_, i) { return String(i + 1); });
+    const labelEvery = cfg.labelEvery || 1;
+    const vb = AREA_VB;
+    const plotW = vb.w - vb.left - vb.right, plotH = vb.h - vb.top - vb.bottom;
+    const n = values.length;
+
+    const pts = values.map(function (v, i) {
+      return {
+        x: vb.left + (n === 1 ? 0 : (i / (n - 1)) * plotW),
+        y: vb.top + plotH - (v / cfg.axisMax) * plotH,
+        value: v, label: labels[i]
+      };
+    });
+
+    const linePath = smoothPath(pts);
+    const areaPath = linePath + " L" + pts[n - 1].x + "," + (vb.top + plotH) + " L" + pts[0].x + "," + (vb.top + plotH) + " Z";
+
+    let gridHtml = "";
+    cfg.ticks.forEach(function (t) {
+      const y = vb.top + plotH - (t / cfg.axisMax) * plotH;
+      gridHtml += '<line class="chart-grid" x1="' + vb.left + '" x2="' + (vb.w - vb.right) + '" y1="' + y + '" y2="' + y + '"/>' +
+        '<text class="chart-axis-label" x="' + (vb.left - 8) + '" y="' + (y + 3.5) + '" text-anchor="end">' + fmtNum(t) + "</text>";
+    });
+
+    let xLabelHtml = "";
+    pts.forEach(function (p, i) {
+      if (i % labelEvery === 0 || i === n - 1) {
+        xLabelHtml += '<text class="chart-axis-label" x="' + p.x + '" y="' + (vb.h - 10) + '" text-anchor="middle">' + p.label + "</text>";
+      }
+    });
+
+    const gradDefs = '<defs><linearGradient id="areaGrad" gradientUnits="userSpaceOnUse" x1="0" y1="' + vb.top + '" x2="0" y2="' + (vb.top + plotH) + '">' +
+      '<stop offset="0%" stop-color="#FF6416" stop-opacity="0.32"/>' +
+      '<stop offset="55%" stop-color="#FF6416" stop-opacity="0.12"/>' +
+      '<stop offset="100%" stop-color="#FF6416" stop-opacity="0"/>' +
+      "</linearGradient></defs>";
+
+    const svg = '<svg viewBox="0 0 ' + vb.w + " " + vb.h + '" aria-hidden="true">' + gradDefs +
+      "<g>" + gridHtml + "</g>" + "<g>" + xLabelHtml + "</g>" +
+      '<g class="chart-trend-shape">' +
+        '<path d="' + areaPath + '" fill="url(#areaGrad)" stroke="none"/>' +
+        '<path d="' + linePath + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      "</g>" +
+      '<line class="chart-crosshair" id="areaCrosshair" x1="0" x2="0" y1="' + vb.top + '" y2="' + (vb.top + plotH) + '"/>' +
+      '<circle class="chart-dot" id="areaDot" r="4.5"/>' +
+      '<rect class="chart-hit" x="' + vb.left + '" y="' + vb.top + '" width="' + plotW + '" height="' + plotH + '"/>' +
+      "</svg>";
+
+    return { svg: svg, pts: pts, vb: vb };
+  }
+
+  function wireAreaChartInteractivity(svgEl, chart, seriesLabel) {
+    const hit = svgEl.querySelector(".chart-hit");
+    const crosshair = svgEl.querySelector("#areaCrosshair");
+    const dot = svgEl.querySelector("#areaDot");
+    const tooltip = svgEl.closest(".chart-wrap").querySelector(".chart-tooltip");
+    const pts = chart.pts;
+
+    function svgX(evt) {
+      const pt = svgEl.createSVGPoint();
+      pt.x = evt.clientX; pt.y = evt.clientY;
+      const ctm = svgEl.getScreenCTM();
+      if (!ctm) return null;
+      return pt.matrixTransform(ctm.inverse()).x;
+    }
+    function nearestIndex(x) {
+      let closest = 0, minDist = Infinity;
+      pts.forEach(function (p, i) { const d = Math.abs(p.x - x); if (d < minDist) { minDist = d; closest = i; } });
+      return closest;
+    }
+    function showAt(i) {
+      const p = pts[i];
+      crosshair.setAttribute("x1", p.x); crosshair.setAttribute("x2", p.x);
+      crosshair.style.opacity = "1";
+      dot.setAttribute("cx", p.x); dot.setAttribute("cy", p.y);
+      dot.style.opacity = "1";
+      tooltip.innerHTML = '<div class="tt-label">' + p.label + '</div>' +
+        '<div class="tt-row"><span class="tt-key" style="background:var(--accent)"></span>' + seriesLabel +
+        '<span class="tt-value">' + fmtNum(p.value) + " 則</span></div>";
+      const rect = svgEl.getBoundingClientRect();
+      const scaleX = rect.width / chart.vb.w, scaleY = rect.height / chart.vb.h;
+      tooltip.style.left = (p.x * scaleX) + "px";
+      tooltip.style.top = (p.y * scaleY) + "px";
+      tooltip.style.opacity = "1";
+    }
+    function hide() { crosshair.style.opacity = "0"; dot.style.opacity = "0"; tooltip.style.opacity = "0"; }
+
+    hit.addEventListener("pointermove", function (evt) { const x = svgX(evt); if (x !== null) showAt(nearestIndex(x)); });
+    hit.addEventListener("pointerleave", hide);
+  }
+
+  const BAR_VB = { w: 600, h: 220, left: 10, right: 10, top: 14, bottom: 34 };
+
+  function buildBarChart() {
+    const cfg = DASH.smsMms;
+    const labels = cfg.labels;
+    const n = labels.length;
+    const vb = BAR_VB;
+    const plotW = vb.w - vb.left - vb.right, plotH = vb.h - vb.top - vb.bottom;
+    const axisMax = 500, ticks = [0, 250, 500];
+    const groupW = plotW / n, barGap = 5;
+    const barW = Math.min(30, (groupW - barGap - 14) / 2);
+    const baseline = vb.top + plotH;
+
+    let barsHtml = "", xLabelHtml = "";
+    const meta = [];
+    labels.forEach(function (label, i) {
+      const cx = vb.left + groupW * (i + 0.5);
+      const smsX = cx - barGap / 2 - barW, mmsX = cx + barGap / 2;
+      const smsV = cfg.sms[i], mmsV = cfg.mms[i];
+      const smsH = (smsV / axisMax) * plotH, mmsH = (mmsV / axisMax) * plotH;
+
+      barsHtml +=
+        '<g class="bar-mark" tabindex="0" data-i="' + i + '" role="img" aria-label="' + label + " SMS " + smsV + " 則、MMS " + mmsV + ' 則">' +
+          '<path d="' + roundedTopRectPath(smsX, baseline - smsH, barW, smsH, 4) + '" fill="url(#smsGrad)"/>' +
+          '<path d="' + roundedTopRectPath(mmsX, baseline - mmsH, barW, mmsH, 4) + '" fill="url(#mmsGrad)"/>' +
+        "</g>";
+      xLabelHtml += '<text class="chart-axis-label" x="' + cx + '" y="' + (vb.h - 10) + '" text-anchor="middle">' + label + "</text>";
+      meta.push({ x: cx, sms: smsV, mms: mmsV, label: label });
+    });
+
+    let gridHtml = "";
+    ticks.forEach(function (t) {
+      const y = vb.top + plotH - (t / axisMax) * plotH;
+      gridHtml += '<line class="chart-grid" x1="' + vb.left + '" x2="' + (vb.w - vb.right) + '" y1="' + y + '" y2="' + y + '"/>';
+    });
+
+    // 漸層用 userSpaceOnUse：所有長條共用同一段垂直色階，短棒不會被壓縮成不同深淺
+    const gradDefs = '<defs>' +
+      '<linearGradient id="smsGrad" gradientUnits="userSpaceOnUse" x1="0" y1="' + vb.top + '" x2="0" y2="' + baseline + '">' +
+        '<stop offset="0%" stop-color="#FF6416"/><stop offset="100%" stop-color="#FFA76B"/></linearGradient>' +
+      '<linearGradient id="mmsGrad" gradientUnits="userSpaceOnUse" x1="0" y1="' + vb.top + '" x2="0" y2="' + baseline + '">' +
+        '<stop offset="0%" stop-color="#3B82F6"/><stop offset="100%" stop-color="#8FB8FA"/></linearGradient>' +
+      "</defs>";
+
+    const svg = '<svg viewBox="0 0 ' + vb.w + " " + vb.h + '" aria-hidden="true">' + gradDefs +
+      "<g>" + gridHtml + "</g>" + barsHtml + "<g>" + xLabelHtml + "</g>" + "</svg>";
+
+    return { svg: svg, vb: vb, meta: meta };
+  }
+
+  function wireBarChartInteractivity(svgEl, bar) {
+    const tooltip = svgEl.closest(".chart-wrap").querySelector(".chart-tooltip");
+    function showFor(i) {
+      const m = bar.meta[i];
+      tooltip.innerHTML = '<div class="tt-label">' + m.label + '</div>' +
+        '<div class="tt-row"><span class="tt-key" style="background:var(--accent)"></span>SMS<span class="tt-value">' + fmtNum(m.sms) + " 則</span></div>" +
+        '<div class="tt-row"><span class="tt-key" style="background:#3B82F6"></span>MMS<span class="tt-value">' + fmtNum(m.mms) + " 則</span></div>";
+      const rect = svgEl.getBoundingClientRect();
+      const scaleX = rect.width / bar.vb.w, scaleY = rect.height / bar.vb.h;
+      tooltip.style.left = (m.x * scaleX) + "px";
+      tooltip.style.top = (bar.vb.top * scaleY) + "px";
+      tooltip.style.opacity = "1";
+    }
+    function hide() { tooltip.style.opacity = "0"; }
+    svgEl.querySelectorAll(".bar-mark").forEach(function (g) {
+      const i = parseInt(g.getAttribute("data-i"), 10);
+      g.addEventListener("pointerenter", function () { showFor(i); });
+      g.addEventListener("pointerleave", hide);
+      g.addEventListener("focus", function () { showFor(i); });
+      g.addEventListener("blur", hide);
+    });
+  }
+
+  function buildStatCard(label, value, prev, prevLabel, iconName) {
+    const delta = ((value - prev) / prev) * 100;
+    const up = delta >= 0;
+    const deltaStr = (up ? "+" : "") + delta.toFixed(1) + "%";
+    return '<div class="stat-card span-3">' +
+      '<div class="s-icon">' + icon(iconName) + "</div>" +
+      "<div>" +
+        '<div class="s-label">' + label + "</div>" +
+        '<div class="s-row"><div class="s-value" data-target="' + value + '">0</div>' +
+        '<span class="s-delta ' + (up ? "up" : "down") + '">' + icon(up ? "up" : "down") + deltaStr + "</span></div>" +
+        '<div class="s-compare">較' + prevLabel + "（" + fmtNum(prev) + "）</div>" +
+      "</div></div>";
+  }
+
+  function renderDashboardHTML() {
+    const stats = buildStatCard("今日發送量", DASH.todaySent.value, DASH.todaySent.prev, DASH.todaySent.prevLabel, "send") +
+      buildStatCard("本月總發送量", DASH.monthSent.value, DASH.monthSent.prev, DASH.monthSent.prevLabel, "stackedMail");
+
+    const periods = [{ key: "week", label: "本週" }, { key: "month", label: "本月" }, { key: "quarter", label: "本季" }];
+    const periodTabs = periods.map(function (p) {
+      return '<button data-period="' + p.key + '" class="' + (p.key === "month" ? "active" : "") + '">' + p.label + "</button>";
+    }).join("");
+
+    const contractRows = DASH.contract.map(function (c) {
+      return '<div class="contract-row"><dt>' + c.label + "</dt><dd>" + c.value + "</dd></div>";
+    }).join("");
+
+    return '<div class="page-head"><h1>總覽</h1></div>' +
+      '<div class="dash-grid">' +
+        stats +
+        '<div class="contract-card span-6"><h3>合約摘要</h3><div class="cc-sub">目前僅支援儲值制</div>' + contractRows + "</div>" +
+        '<div class="chart-card span-6"><div class="cc-head">' +
+          '<div><h3>發送趨勢</h3><div class="cc-sub">SMS + MMS 合計發送量</div></div>' +
+          '<div class="chart-period-tabs" id="periodTabs">' + periodTabs + "</div></div>" +
+          '<div class="chart-wrap" id="areaChartWrap"><div class="chart-tooltip"></div></div></div>' +
+        '<div class="chart-card span-6"><div class="cc-head"><div><h3>SMS / MMS 發送量</h3><div class="cc-sub">近 7 天</div></div></div>' +
+          '<div class="chart-wrap" id="barChartWrap"><div class="chart-tooltip"></div></div>' +
+          '<div class="chart-legend">' +
+            '<span class="lg-item"><span class="lg-key" style="background:linear-gradient(180deg,#FF6416,#FFA76B)"></span>SMS</span>' +
+            '<span class="lg-item"><span class="lg-key" style="background:linear-gradient(180deg,#3B82F6,#8FB8FA)"></span>MMS</span>' +
+          "</div></div>" +
+      "</div>";
+  }
+
+  function initDashboardCharts() {
+    let currentPeriod = "month";
+    function renderArea(period, animate) {
+      const wrap = document.getElementById("areaChartWrap");
+      const chart = buildAreaChart(period);
+      wrap.innerHTML = chart.svg + '<div class="chart-tooltip"></div>';
+      const svgEl = wrap.querySelector("svg");
+      wireAreaChartInteractivity(svgEl, chart, "SMS+MMS");
+
+      if (animate) {
+        const shape = svgEl.querySelector(".chart-trend-shape");
+        shape.classList.add("chart-anim-in");
+      }
+    }
+    renderArea(currentPeriod, true);   // 只有首次載入要跑進場動畫
+    document.getElementById("periodTabs").querySelectorAll("button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const p = btn.getAttribute("data-period");
+        if (p === currentPeriod) return;
+        currentPeriod = p;
+        document.getElementById("periodTabs").querySelectorAll("button").forEach(function (b) { b.classList.toggle("active", b === btn); });
+        renderArea(currentPeriod);   // 切換 tab 不傳 animate，不重跑
+      });
+    });
+
+    function renderBar(animate) {
+      const barWrap = document.getElementById("barChartWrap");
+      const bar = buildBarChart();
+      barWrap.innerHTML = bar.svg + '<div class="chart-tooltip"></div>';
+      const svgEl = barWrap.querySelector("svg");
+      wireBarChartInteractivity(svgEl, bar);
+      if (animate) {
+        svgEl.querySelectorAll(".bar-mark").forEach(function (g) { g.classList.add("chart-anim-in"); });
+      }
+    }
+    renderBar(true);   // 只有首次載入要跑進場動畫（目前長條圖沒有會重建它的互動，先備著跟趨勢圖同一套規則）
+  }
 
   const state = { activeTop: "overview", activeChildId: null, activeTabIndex: 0, expandedGroup: null };
 
@@ -444,7 +981,7 @@
         const expanded = state.expandedGroup === item.id;
         const isActiveGroup = state.activeTop === item.id;
         html += '<button class="nav-row' + (isActiveGroup && !expanded ? " active" : "") + '" data-group="' + item.id + '" aria-expanded="' + expanded + '">' +
-          icon(item.icon) + '<span class="label">' + item.label + '</span>' + icon("chevRight", 'class="ico chev"') +
+          icon(item.icon) + '<span class="label">' + item.label + '</span>' + icon("chevDown", 'class="ico chev"') +
           '</button>';
         if (expanded) {
           html += '<div class="nav-group-children">';
@@ -489,7 +1026,6 @@
         state.activeChildId = btn.getAttribute("data-child");
         state.activeTabIndex = 0;
         render();
-        closeSidebarOnMobile();
       });
     });
     scroll.querySelectorAll("[data-top]").forEach(function (btn) {
@@ -499,37 +1035,25 @@
         state.expandedGroup = null;
         state.activeTabIndex = 0;
         render();
-        closeSidebarOnMobile();
         if (state.activeTop === "talkod") showToast("外部連結：實際點擊會另開 TalkOD 分頁");
       });
     });
   }
 
   function renderContent() {
-    const crumb = document.getElementById("crumb");
     const content = document.getElementById("content");
     const topItem = NAV.find(function (n) { return n.id === state.activeTop; });
 
-    const protoNote = '<div class="proto-note">' + icon("home") +
-      '<div><b>導覽結構原型</b> — 側邊欄項目＝一個頁面，頁面內的 Tab＝下一層分類。點左邊試試每個項目會對應到什麼內容，尚未套用視覺風格。</div></div>';
+    const protoNote = '';
 
     if (topItem.kind === "dashboard") {
-      crumb.innerHTML = '<span class="current">總覽</span>';
-      let cards = "";
-      OVERVIEW_CARDS.forEach(function (c) {
-        cards += '<div class="kpi-card"><div class="k-label">' + c.label +
-          (c.phase2 ? '<span class="p2-badge">P2</span>' : '') + '</div><div class="k-body">' +
-          c.body.map(function (b) { return "<div>" + b + "</div>"; }).join("") + '</div></div>';
-      });
-      content.innerHTML = protoNote +
-        '<div class="page-head"><h1>總覽</h1></div>' +
-        '<div class="page-sub">後台登入後的首頁，卡片內容尚未展開細節</div>' +
-        '<div class="kpi-grid">' + cards + '</div>';
+      content.innerHTML = protoNote + renderDashboardHTML();
+      initDashboardCharts();
+      initStatCountUp();
       return;
     }
 
     if (topItem.kind === "external") {
-      crumb.innerHTML = '<span class="current">互動回覆簡訊</span>';
       content.innerHTML = protoNote +
         '<div class="ext-card">' + icon("external", 'style="width:22px;height:22px"') +
         '<div><h2>互動回覆簡訊（TalkOD）</h2><p>' + topItem.detail + ' 建議在側邊欄用外部連結圖示標示，讓使用者知道這不是站內頁面。</p></div></div>';
@@ -538,10 +1062,9 @@
 
     // group -> child
     const child = findChild(topItem, state.activeChildId) || topItem.children[0];
-    crumb.innerHTML = '<span>' + topItem.label + '</span><span class="sep">›</span><span class="current">' + child.label +
-      (child.phase2 ? '<span class="p2-badge" style="margin-left:6px;">Phase 2</span>' : '') + '</span>';
 
-    let html = protoNote + '<div class="page-head"><h1>' + child.label + '</h1></div>';
+    let html = protoNote + '<div class="page-head"><h1>' + child.label +
+      (child.phase2 ? '<span class="p2-badge" style="margin-left:8px;vertical-align:middle;">Phase 2</span>' : '') + '</h1></div>';
 
     if (child.tabs && child.tabs.length > 0) {
       let tabsHtml = '<div class="tabbar">';
@@ -614,21 +1137,24 @@
     state.expandedGroup = "billing";
     state.activeTabIndex = 0;
     render();
-    closeSidebarOnMobile();
     showToast("全域元件：點數卡的儲值捷徑，直達 帳務與點數 › 儲值");
   });
 
-  // ---- mobile sidebar ----
-  const shell = document.getElementById("shell");
-  document.getElementById("hamburgerBtn").addEventListener("click", function () {
-    shell.classList.add("sidebar-open");
+  // ---- 側邊欄收合 ----
+  // 箭頭方向要跟著狀態換 icon（不用旋轉，否則面板的分隔線會跑到右邊，但側欄一直在左邊）
+  const PANEL_ARROW = {
+    close: '<path d="m16 15-3-3 3-3"/>',   // Lucide panel-left-close
+    open:  '<path d="m14 9 3 3-3 3"/>'     // Lucide panel-left-open
+  };
+  document.getElementById("sidebarToggle").addEventListener("click", function () {
+    const collapsed = document.getElementById("sidebar").classList.toggle("collapsed");
+    document.getElementById("shell").classList.toggle("sidebar-collapsed");
+    this.classList.toggle("active");
+    document.getElementById("sidebarToggleIcon").innerHTML =
+      '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>' +
+      (collapsed ? PANEL_ARROW.open : PANEL_ARROW.close);
+    this.setAttribute("aria-label", collapsed ? "展開側邊欄" : "收合側邊欄");
   });
-  document.getElementById("backdrop").addEventListener("click", function () {
-    shell.classList.remove("sidebar-open");
-  });
-  function closeSidebarOnMobile() {
-    shell.classList.remove("sidebar-open");
-  }
 
   render();
 })();
