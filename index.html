@@ -37,9 +37,13 @@
     --chart-anim-easing: ease-out;
     /* KPI 數字 count-up 專用（1-1.5s 區間內，比 chart 進場動畫慢，數字用同一顆 ease-out） */
     --kpi-anim-duration: 1200ms;
-    /* 側邊選單展開箭頭旋轉：互動動畫，比進場動畫快很多 */
-    --nav-chev-duration: 180ms;
-    --nav-chev-easing: ease;
+    /* 側邊選單互動動畫（2026-08-03 對齊 TailAdmin 實測值）：
+       箭頭旋轉 200ms、子選單展開 300ms，兩者共用 Tailwind 的標準 easing。
+       箭頭比展開快一點，先轉完再等內容拉開，順序感才對 */
+    --nav-chev-duration: 200ms;
+    --nav-chev-easing: cubic-bezier(0.4, 0, 0.2, 1);
+    --nav-submenu-duration: 300ms;
+    --nav-submenu-easing: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   * { box-sizing: border-box; }
@@ -125,8 +129,19 @@
   .nav-row[aria-expanded="true"] .chev { transform: rotate(180deg); }
   @media (prefers-reduced-motion: reduce) {
     .nav-row .chev { transition: none; }
+    .nav-group-wrap { transition: none; }
   }
   .nav-row .ext-mark { width: 12px; height: 12px; opacity: .5; flex-shrink: 0; }
+
+  /* 子選單外層：高度 0 ↔ 內容高度做展開動畫。
+     高度值由 JS 量 scrollHeight 後寫成 inline style（CSS 沒辦法對 auto 做 transition）。
+     ⚠️ 這層一直存在於 DOM，收合時只是高度 0 —— 之前是「展開才塞進 DOM」，
+     瀏覽器拿到的是全新節點、沒有前一個值可以補間，動畫永遠不會跑 */
+  .nav-group-wrap {
+    height: 0;
+    overflow: hidden;
+    transition: height var(--nav-submenu-duration) var(--nav-submenu-easing);
+  }
 
   .nav-group-children {
     display: flex;
@@ -969,34 +984,32 @@
   }
 
   function render() {
-    renderSidebar();
+    syncSidebar();
     renderContent();
   }
 
-  function renderSidebar() {
+  /* 側欄的 DOM 只建一次（含全部子選單），之後狀態改變一律用 syncSidebar() 改既有節點。
+     不能每次都 innerHTML 重建 —— 全新節點沒有前一個值可以補間，高度與旋轉動畫都跑不出來。 */
+  function buildSidebar() {
     const scroll = document.getElementById("navScroll");
     let html = "";
     NAV.forEach(function (item) {
       if (item.kind === "group") {
-        const expanded = state.expandedGroup === item.id;
-        const isActiveGroup = state.activeTop === item.id;
-        html += '<button class="nav-row' + (isActiveGroup && !expanded ? " active" : "") + '" data-group="' + item.id + '" aria-expanded="' + expanded + '">' +
+        html += '<button class="nav-row" data-group="' + item.id + '" aria-expanded="false">' +
           icon(item.icon) + '<span class="label">' + item.label + '</span>' + icon("chevDown", 'class="ico chev"') +
           '</button>';
-        if (expanded) {
-          html += '<div class="nav-group-children">';
-          item.children.forEach(function (child) {
-            const active = state.activeTop === item.id && state.activeChildId === child.id;
-            html += '<button class="nav-child' + (active ? " active" : "") + '" data-group="' + item.id + '" data-child="' + child.id + '">' +
-              '<span class="label">' + child.label + '</span>' +
-              (child.phase2 ? '<span class="p2-badge">P2</span>' : '') +
-              '</button>';
-          });
-          html += '</div>';
-        }
+        // 子選單一律輸出，收合時靠 .nav-group-wrap 的 height:0 藏起來
+        html += '<div class="nav-group-wrap" data-wrap="' + item.id + '">';
+        html += '<div class="nav-group-children">';
+        item.children.forEach(function (child) {
+          html += '<button class="nav-child" data-group="' + item.id + '" data-child="' + child.id + '">' +
+            '<span class="label">' + child.label + '</span>' +
+            (child.phase2 ? '<span class="p2-badge">P2</span>' : '') +
+            '</button>';
+        });
+        html += '</div></div>';
       } else {
-        const active = state.activeTop === item.id;
-        html += '<button class="nav-row' + (active ? " active" : "") + '" data-top="' + item.id + '">' +
+        html += '<button class="nav-row" data-top="' + item.id + '">' +
           icon(item.icon) + '<span class="label">' + item.label + '</span>' +
           (item.kind === "external" ? icon("external", 'class="ico ext-mark"') : "") +
           '</button>';
@@ -1039,6 +1052,62 @@
       });
     });
   }
+
+  /* 只改既有節點的狀態與高度，不動 DOM 結構。
+     第一次呼叫（initial=true）直接跳到最終高度、不跑動畫，
+     否則一進站就會看到選單自己展開一次，很像畫面壞掉。 */
+  function syncSidebar(initial) {
+    const scroll = document.getElementById("navScroll");
+
+    scroll.querySelectorAll("[data-group]:not([data-child])").forEach(function (btn) {
+      const gid = btn.getAttribute("data-group");
+      const expanded = state.expandedGroup === gid;
+      btn.setAttribute("aria-expanded", String(expanded));
+      // 展開時群組本身不標 active（active 交給展開的子項），跟原本的邏輯一致
+      btn.classList.toggle("active", state.activeTop === gid && !expanded);
+
+      const wrap = scroll.querySelector('[data-wrap="' + gid + '"]');
+      if (!wrap) return;
+
+      if (initial) {
+        // 不要動畫：先關掉 transition，設完高度再還原
+        const prev = wrap.style.transition;
+        wrap.style.transition = "none";
+        wrap.style.height = expanded ? "auto" : "0px";
+        void wrap.offsetHeight;          // 強制 reflow，讓上面這行立刻生效
+        wrap.style.transition = prev;
+      } else if (expanded) {
+        // auto 沒辦法做 transition，要先量出實際高度
+        wrap.style.height = wrap.scrollHeight + "px";
+      } else {
+        // 若目前是 auto（展開狀態），得先固定成具體數值才收得動
+        if (wrap.style.height === "auto") {
+          wrap.style.height = wrap.scrollHeight + "px";
+          void wrap.offsetHeight;
+        }
+        wrap.style.height = "0px";
+      }
+    });
+
+    scroll.querySelectorAll("[data-child]").forEach(function (btn) {
+      const isActive = state.activeTop === btn.getAttribute("data-group") &&
+                       state.activeChildId === btn.getAttribute("data-child");
+      btn.classList.toggle("active", isActive);
+    });
+
+    scroll.querySelectorAll("[data-top]").forEach(function (btn) {
+      btn.classList.toggle("active", state.activeTop === btn.getAttribute("data-top"));
+    });
+  }
+
+  /* 展開動畫結束後把高度改回 auto，這樣子選單內容之後若有變動
+     （例如加了新項目）不會被卡在當初量到的固定高度 */
+  document.getElementById("navScroll").addEventListener("transitionend", function (e) {
+    const wrap = e.target;
+    if (e.propertyName !== "height" || !wrap.classList.contains("nav-group-wrap")) return;
+    const gid = wrap.getAttribute("data-wrap");
+    if (state.expandedGroup === gid) wrap.style.height = "auto";
+  });
 
   function renderContent() {
     const content = document.getElementById("content");
@@ -1156,7 +1225,9 @@
     this.setAttribute("aria-label", collapsed ? "展開側邊欄" : "收合側邊欄");
   });
 
-  render();
+  buildSidebar();
+  syncSidebar(true);   // 首次進站直接定位，不跑展開動畫
+  renderContent();
 })();
 </script>
 
