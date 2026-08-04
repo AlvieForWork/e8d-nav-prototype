@@ -133,6 +133,13 @@
   }
   .nav-row .ext-mark { width: 12px; height: 12px; opacity: .5; flex-shrink: 0; }
 
+  /* 互動回覆簡訊（TalkOD）品牌 logo：實心＋漸層天生比 18px 線稿 icon 重，
+     跟下面那排線性 icon 用同一個 18×18 格子對齊、不特別放大，
+     視覺分量已經靠顏色/實心自然比周圍重，不需要再加尺寸 */
+  .nav-row .nav-logo { flex-shrink: 0; width: 18px; height: 18px; }
+  /* 獨立產品入口跟下面的平台功能群組分兩塊：一條細線，顏色跟其他分隔線同一個 token */
+  .nav-divider { height: 1px; background: var(--border); margin: 8px 4px; flex-shrink: 0; }
+
   /* 子選單外層：高度 0 ↔ 內容高度做展開動畫。
      高度值由 JS 量 scrollHeight 後寫成 inline style（CSS 沒辦法對 auto 做 transition）。
      ⚠️ 這層一直存在於 DOM，收合時只是高度 0 —— 之前是「展開才塞進 DOM」，
@@ -584,6 +591,37 @@
 (function () {
   "use strict";
 
+  // 互動回覆簡訊（TalkOD）自己的品牌 logo，實心＋漸層，不走下面 ICONS 那套
+  // 線性 stroke 樣板（viewBox 24、currentColor）——這是獨立產品，用意就是
+  // 讓它看起來「不是平台自己的功能」。原始檔：E8D_logo/chat_logo.svg
+  const TALKOD_LOGO_SVG = '<svg class="nav-logo" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<circle cx="28" cy="28" r="28" fill="url(#paint0_linear_229_1657)"/>' +
+    '<path fill-rule="evenodd" clip-rule="evenodd" d="M39.3612 42.716C37.9314 42.716 36.5014 42.7324 35.0719 42.7114C33.6513 42.6904 32.3064 42.4009 31.0342 41.7034C28.0457 40.0648 26.2736 37.5935 25.7806 34.2418C25.5215 32.4806 25.7928 30.7785 26.5121 29.1302C27.1292 27.7161 28.0264 26.5418 29.1598 25.5083C29.8479 24.8811 30.6556 24.4731 31.4695 24.0718C35.188 22.2386 39.7929 23.6236 42.3314 26.3754C45.246 29.5349 45.7592 34.3521 43.4925 38.0642C43.0074 38.8586 43.0553 39.2618 43.7112 39.9145C44.088 40.2895 44.4588 40.6707 44.8424 41.0388C45.1692 41.3524 45.2815 41.7135 45.1183 42.1388C44.9508 42.575 44.6081 42.7287 44.1552 42.7266C42.5573 42.7195 40.9592 42.7239 39.3612 42.7239C39.3612 42.7213 39.3612 42.7186 39.3612 42.716" fill="#FFDBC8"/>' +
+    '<path fill-rule="evenodd" clip-rule="evenodd" d="M35.4183 31.8828C34.7847 31.8808 34.3028 32.3591 34.3058 32.987C34.3087 33.5955 34.7804 34.0725 35.388 34.0815C36.0039 34.0908 36.5089 33.5906 36.5054 32.9748C36.5022 32.3694 36.0196 31.8847 35.4183 31.8828" fill="#F67D3C"/>' +
+    '<path fill-rule="evenodd" clip-rule="evenodd" d="M32.3539 31.8866C31.7124 31.8789 31.2271 32.3492 31.2256 32.9797C31.2242 33.5811 31.702 34.0686 32.3066 34.0825C32.9053 34.0963 33.4599 33.5649 33.4522 32.9848C33.4444 32.3914 32.9465 31.8935 32.3539 31.8866" fill="#F67D3C"/>' +
+    '<path fill-rule="evenodd" clip-rule="evenodd" d="M38.5158 31.8851C37.8849 31.8713 37.3732 32.3505 37.366 32.9618C37.3591 33.5578 37.8429 34.0637 38.4353 34.0801C39.0523 34.0971 39.5783 33.6042 39.5902 32.9978C39.6019 32.3991 39.1183 31.8982 38.5158 31.8851" fill="#F67D3C"/>' +
+    '<g filter="url(#filter0_d_229_1657)">' +
+    '<path fill-rule="evenodd" clip-rule="evenodd" d="M18.3537 38.4502C20.2035 38.4502 22.0536 38.4714 23.903 38.4442C25.7409 38.4171 27.4809 38.0425 29.1267 37.1401C32.9931 35.0201 35.2857 31.823 35.9236 27.4867C36.2588 25.2081 35.9078 23.006 34.9772 20.8735C34.1788 19.044 33.0181 17.5249 31.5517 16.1877C30.6616 15.3762 29.6166 14.8484 28.5635 14.3292C23.7528 11.9576 17.7951 13.7493 14.511 17.3095C10.7402 21.3971 10.0762 27.6293 13.0088 32.4319C13.6363 33.4596 13.5744 33.9813 12.7259 34.8257C12.2384 35.3109 11.7586 35.804 11.2624 36.2802C10.8396 36.686 10.6942 37.1532 10.9055 37.7034C11.1222 38.2677 11.5655 38.4666 12.1514 38.4639C14.2188 38.4547 16.2862 38.4603 18.3537 38.4603C18.3537 38.457 18.3537 38.4535 18.3537 38.4502" fill="white"/>' +
+    '<path fill-rule="evenodd" clip-rule="evenodd" d="M23.4125 24.4575C24.2202 24.455 24.8347 25.0643 24.8308 25.8642C24.827 26.6394 24.2258 27.2471 23.4511 27.2586C22.666 27.2704 22.0222 26.6331 22.0266 25.8487C22.0307 25.0775 22.6459 24.46 23.4125 24.4575" fill="#F78344"/>' +
+    '<path fill-rule="evenodd" clip-rule="evenodd" d="M27.3716 24.4576C28.2146 24.4479 28.8524 25.0477 28.8544 25.8518C28.8562 26.619 28.2283 27.2407 27.4338 27.2585C26.647 27.2761 25.9182 26.5982 25.9283 25.8584C25.9386 25.1015 26.5928 24.4665 27.3716 24.4576" fill="#F78344"/>' +
+    '<path fill-rule="evenodd" clip-rule="evenodd" d="M19.4167 24.4579C20.2466 24.4403 20.9197 25.0516 20.9291 25.8316C20.9382 26.5919 20.3018 27.2374 19.5225 27.2583C18.7108 27.28 18.0189 26.6511 18.0033 25.8775C17.9878 25.1137 18.624 24.4747 19.4167 24.4579" fill="#F78344"/>' +
+    '</g>' +
+    '<defs>' +
+    '<filter id="filter0_d_229_1657" x="10.8094" y="13.2524" width="27.2385" height="26.2114" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">' +
+    '<feFlood flood-opacity="0" result="BackgroundImageFix"/>' +
+    '<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>' +
+    '<feOffset dx="2" dy="1"/>' +
+    '<feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 0.47451 0 0 0 0 0.2 0 0 0 1 0"/>' +
+    '<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_229_1657"/>' +
+    '<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_229_1657" result="shape"/>' +
+    '</filter>' +
+    '<linearGradient id="paint0_linear_229_1657" x1="5.81376" y1="28" x2="5.81376" y2="56" gradientUnits="userSpaceOnUse">' +
+    '<stop stop-color="#FF7A33"/>' +
+    '<stop offset="1" stop-color="#FF8B4D"/>' +
+    '</linearGradient>' +
+    '</defs>' +
+  '</svg>';
+
   // ---- 全站圖示統一使用 Lucide（viewBox 24、stroke-width 2）----
   const ICONS = {
     home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
@@ -614,9 +652,12 @@
 
   // ---- IA data, mirrors the E8D TO-BE FigJam tree ----
   const NAV = [
-    { id: "overview", label: "總覽", kind: "dashboard", icon: "home" },
-    { id: "talkod", label: "互動回覆簡訊", kind: "external", icon: "send",
+    // 2026-08-04：獨立產品入口，移到最上面（新產品要曝光），用 useLogo 換成
+    // 自己的實心品牌 logo（不吃 icon()／currentColor 那套線性 icon 樣板），
+    // dividerAfter 在它下面畫一條線，跟下面的平台模組群組隔開
+    { id: "talkod", label: "互動回覆簡訊", kind: "external", useLogo: true, dividerAfter: true,
       detail: "外部連結（TalkOD），點擊後另開分頁，不在此後台內顯示頁面。" },
+    { id: "overview", label: "總覽", kind: "dashboard", icon: "home" },
     { id: "messaging", label: "訊息發送", kind: "group", icon: "send", children: [
       { id: "sms-send", label: "簡訊發送", tabs: ["SMS 簡訊發送", "MMS 簡訊發送"],
         detail: "收訊人選取為發送流程內的共用步驟：載入大量名單／手動輸入（名單不留存，發送完成即清除）" },
@@ -1009,10 +1050,13 @@
         });
         html += '</div></div>';
       } else {
-        html += '<button class="nav-row" data-top="' + item.id + '">' +
-          icon(item.icon) + '<span class="label">' + item.label + '</span>' +
+        html += '<button class="nav-row' + (item.useLogo ? ' has-logo' : '') + '" data-top="' + item.id + '">' +
+          (item.useLogo ? TALKOD_LOGO_SVG : icon(item.icon)) +
+          '<span class="label">' + item.label + '</span>' +
           (item.kind === "external" ? icon("external", 'class="ico ext-mark"') : "") +
           '</button>';
+        // 獨立產品入口跟下面的平台功能群組用一條線隔開，視覺分兩塊
+        if (item.dividerAfter) html += '<div class="nav-divider"></div>';
       }
     });
     scroll.innerHTML = html;
