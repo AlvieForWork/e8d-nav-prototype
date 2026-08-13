@@ -571,27 +571,41 @@
   .filter-bar .dd { width: 148px; }
   .filter-bar-spacer { flex: 1; }
 
-  /* ---- 組織樹（帳號主頁左側，企業管理員可見；部門管理員改用 .dept-context 小字，見下方） ---- */
-  .org-shell { display: flex; align-items: flex-start; gap: 20px; }
-  .org-tree { width: 216px; flex-shrink: 0; background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); padding: 10px; }
-  .org-tree-company { display: flex; align-items: center; gap: 8px; padding: 8px 10px 10px; font-size: var(--fs-small); line-height: var(--lh-small); font-weight: 700; color: var(--text); border-bottom: 1px solid var(--border); margin-bottom: 6px; }
-  .org-tree-company .ico { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; }
-  .org-tree-item {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left;
-    padding: 8px 10px; border-radius: var(--radius-md); border: none; background: none; cursor: pointer;
+  /* ---- 部門篩選 chip 列（2026-08-13 取代原本左側的直立組織樹，企業管理員可見）----
+     原本的 .org-tree 是 216px 寬的左側卡片，跟表格左右並排、吃掉主內容區 236px（含 gap）。
+     實測：16 筆正常資料要完全不換行需要 1078px，但有樹的時候表格只剩 860px——
+     差 218px，光調欄寬在數學上救不回來（套過完美比例，9 欄仍有 8 欄換行）。
+     改成橫向 chip 列放在表格上方後，表格在 1440 拿到 1096px，剛好超過 1078px 的門檻。
+     chip 列實測總寬 734px，1440／1280 都能單行放下，只吃約 40px 垂直、不搶水平空間。
+     樹唯一的獨有價值「各部門帳號數一眼可見」由 chip 上的數字完整保留
+     （頂部原本的「所有部門」下拉沒有數字、功能與樹完全重疊，已一併移除）。 */
+  /* margin-bottom 2026-08-13 從 14px 加大到 24px（約 1.7 倍、落在 4px grid 上）：
+     部門膠囊排與下方工具列排原本黏在一起，分不出是兩個獨立區塊。
+     這個值同時決定「膠囊→工具列」（沒選部門時）與「膠囊→主管資訊列」（有選部門時）的距離，
+     `.dept-context` 的 margin-bottom 也一起改成 24，維持主管那行上下等距（Alvie 前一輪的要求）。
+     用 margin 不用 gap／固定高度，所以 chip 換行、視窗縮放時間距都不會跑掉 */
+  .dept-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .dept-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 14px; border-radius: var(--radius-full);
+    border: 1px solid var(--border); background: var(--surface); cursor: pointer;
     font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text); font-family: var(--font-ui);
+    white-space: nowrap; transition: background .12s ease, border-color .12s ease, color .12s ease;
   }
-  .org-tree-item:hover { background: var(--bg); } /* 2026-08-11：跟表格 hover 統一改淺，原本借用 --surface-2 太重 */
-  .org-tree-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  .org-tree-item .cnt { font-size: var(--fs-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
-  .org-tree-item.active .cnt { color: var(--accent); }
-  .org-main { flex: 1; min-width: 0; }
+  .dept-chip:hover { background: var(--bg); border-color: var(--border-hover); }
+  /* 選中狀態＝淡橘底＋橘框橘字，跟側欄 active、表格 hover 同一套語言 */
+  .dept-chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .dept-chip .cnt { font-size: var(--fs-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .dept-chip.active .cnt { color: var(--accent); }
+  .org-main { min-width: 0; }
 
   /* ---- 表格卡片 ---- */
   .table-card { background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); overflow: hidden; }
   .data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); line-height: var(--lh-body); }
+  /* 表頭字級 2026-08-13 從 13px(caption) 調到 14px(small)——中途試過 15px，但 15 不在
+     六階字級系統裡（30/22/18/16/14/13），Alvie 決定回到系統既有的 14px，改回綁 token */
   .data-table th {
-    text-align: left; font-size: var(--fs-caption); font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+    text-align: left; font-size: var(--fs-small); font-weight: 700; color: var(--text-muted); text-transform: uppercase;
     letter-spacing: .03em; padding: 12px 16px; border-bottom: 1px solid var(--border);
   }
   /* 2026-08-13：欄位變窄後 nowrap 表頭會橫向溢出、疊到隔壁欄標題（例如「所屬部門」疊到「角色」），
@@ -626,7 +640,9 @@
   .badge-dot.is-disabled .dot { background: var(--text-disabled); }
 
   /* ---- 部門情境列（點選部門樹後，列表上方顯示部門名稱＋主管） ---- */
-  .dept-context { display: flex; align-items: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; color: var(--text); margin: -4px 0 14px; }
+  /* 2026-08-13：margin-top 從 -4px 改 0——上方 chip 列的 margin-bottom 會被 -4px 抵銷，
+     看起來就會偏向黏著上面那排 chip。現在上下一致（都是 24px，跟 .dept-chips 同一組數值） */
+  .dept-context { display: flex; align-items: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; color: var(--text); margin: 0 0 24px; }
   .dept-context .ico { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
 
   /* ---- 批次操作：選取模式列首 checkbox／浮出的操作列（checkbox 樣式見 .chk，跟系統元件同一套）---- */
@@ -669,6 +685,13 @@
   .acct-table { min-width: 850px; }
   .data-table.acct-table, .data-table.dept-table { table-layout: fixed; }
   .data-table td.wrap-cell { overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+  /* 窄桌機（~1280）：內容區只剩約 936px、比單行所需的 1078px 少 142px。
+     與其讓每一欄都被壓到換行，改成把 cell 左右 padding 從 16px 收到 12px
+     （9 欄共省 72px），剩下的差額由 E-mail 欄吸收、換成兩行——
+     這是刻意的取捨：短欄位優先保持單行，最長的 E-mail 才換行 */
+  @media (max-width: 1366px) {
+    .acct-table th, .acct-table td { padding-left: 12px; padding-right: 12px; }
+  }
 
   /* ---- Tooltip：系統缺口，這裡先在原型定案方向（深底白字，跟 popover/dd-panel 的白底
      淺色系區隔開，才看得出「這是提示不是可互動面板」），之後要收進 Figma 做成正式元件 ---- */
@@ -836,10 +859,8 @@
   .demo-role-bar button:hover { background: rgba(255,255,255,.10); color: #fff; }
   .demo-role-bar button.active { background: var(--accent); color: #fff; }
 
-  @media (max-width: 900px) {
-    .org-shell { flex-direction: column; }
-    .org-tree { width: 100%; }
-  }
+  /* 2026-08-13：原本這裡是把 .org-shell 的左右並排在窄螢幕改成上下堆疊；
+     部門樹改成 chip 列後本來就是橫向、自己會 flex-wrap 折行，不需要斷點處理 */
 
   /* 2026-08-11：改成符合站內淺色暖調的成功 toast——白底卡片＋綠勾 icon，取代原本純黑底白字
      （跟右上角 icon 區/右下角帳號卡不會撞到：頂部置中、topbar 下方，兩邊都在別的高度）。
@@ -2046,29 +2067,27 @@
   // ============================================================
   // 一、帳號（主頁）
   // ============================================================
-  function renderOrgTree() {
-    let html = '<div class="org-tree">';
-    html += '<div class="org-tree-company">' + icon("org", 'style="width:15px;height:15px"') + 'EVERY8D 股份有限公司</div>';
+  // 部門篩選 chip 列（取代原本的左側組織樹，見 .dept-chips 的 CSS 註解）。
+  // data-tree 這個 attribute 名稱沿用原本的樹，syncOrgTreeActive()／事件綁定都不用改。
+  // 公司名稱那行（原本樹的標題）拿掉——組織目前只有一層（公司底下直接掛部門、沒有子部門），
+  // 那行沒有表達到層級關係，純裝飾，拿掉還能省一截寬度
+  function renderDeptChips() {
     const allCount = ACCOUNTS.filter(function (a) { return a.deptId !== null; }).length;
-    html += '<button class="org-tree-item' + (orgState.deptFilter === "all" ? " active" : "") + '" data-tree="all">全部帳號<span class="cnt">' + allCount + '</span></button>';
+    let html = '<div class="dept-chips">';
+    html += '<button class="dept-chip' + (orgState.deptFilter === "all" ? " active" : "") + '" data-tree="all">全部帳號<span class="cnt">' + allCount + '</span></button>';
     DEPARTMENTS.forEach(function (d) {
       const cnt = ACCOUNTS.filter(function (a) { return a.deptId === d.id; }).length;
-      html += '<button class="org-tree-item' + (orgState.deptFilter === d.id ? " active" : "") + '" data-tree="' + d.id + '">' + d.name + '<span class="cnt">' + cnt + '</span></button>';
+      html += '<button class="dept-chip' + (orgState.deptFilter === d.id ? " active" : "") + '" data-tree="' + d.id + '">' + escAttr(d.name) + '<span class="cnt">' + cnt + '</span></button>';
     });
     html += '</div>';
     return html;
   }
 
   function renderFilterBar() {
-    const isAdmin = state.demoRole === "companyAdmin";
     let html = '<div class="filter-bar">';
     html += '<div class="filter-search">' + icon("search") + '<input type="text" id="acctSearch" placeholder="搜尋姓名／帳號／E-mail" value="' + escAttr(orgState.search) + '"></div>';
-    if (isAdmin) {
-      const deptOptions = [{ value: "all", label: "所有部門" }].concat(DEPARTMENTS.map(function (d) { return { value: d.id, label: d.name }; }));
-      html += renderDropdown("acctDeptFilter", deptOptions, orgState.deptFilter, {
-        onChange: function (v) { orgState.deptFilter = v; syncOrgTreeActive(); refreshAccountsScope(); }
-      });
-    }
+    // 2026-08-13：原本這裡有「所有部門」下拉，跟部門 chip 列功能完全重疊（一樣是單選切換部門），
+    // 且沒有帳號數。改用 chip 列後這個下拉整個移除，篩選列也順勢少一格
     const roleOptions = [{ value: "all", label: "所有角色" }, { value: "deptManager", label: "部門管理員" }, { value: "user", label: "一般使用者" }];
     html += renderDropdown("acctRoleFilter", roleOptions, orgState.roleFilter, {
       onChange: function (v) { orgState.roleFilter = v; refreshAccountsList(); }
@@ -2161,13 +2180,35 @@
     // 2026-08-12 第三版：欄寬全部改成「百分比」而不是固定 px，加總精確等於容器寬度，
     // 數學上不可能超出去，不需要靠橫向捲動或 sticky 補救。批次模式多一欄 checkbox，
     // 比例要重新分配，不能直接在原本 100% 之外加一欄，所以兩組比例分開算。
-    // 2026-08-13 第五版：跟 Alvie 核對過，員工編號／手機拿掉「絕對不換行」的要求後，
-    // 空間才夠分——量過實際內容給 7 個內容欄一個「一般 16 筆資料舒服放得下、只有刻意
-    // 插入的極端值（Alexander Wang-Chen 姓名／帳號、UAE 門號、TECH-2024-0012 員編）
-    // 才會多換幾行」的寬度，帳號狀態／操作維持窄固定（量過 badge／編輯按鈕的實際寬度）
-    const W = bulkMode
-      ? { check: 4, status: 10.1, name: 9.1, account: 11.7, dept: 9, role: 12.8, empNo: 9.3, phone: 18.5, email: 8.1, actions: 7.4 }
-      : { status: 10.5, name: 9.5, account: 12.2, dept: 9.4, role: 13.3, empNo: 9.7, phone: 19.3, email: 8.4, actions: 7.7 };
+    // 2026-08-13 第六版：部門樹改成 chip 列後，表格在 1440 從 860px 拿回 1096px。
+    // 16 筆正常資料要全部單行需要 1078px（各欄內容實測加總 790 ＋ 9 欄 × 32 padding），
+    // 1096 剛好跨過門檻，所以這組比例是「每欄 = 實測內容最大值 + 32px padding」直接換算，
+    // 不是憑感覺調的。多出來的 18px 全給 E-mail（最可能出現更長的真實值）。
+    //   內容實測(px)：狀態58 姓名49 帳號89 部門98 角色82 員編51 手機132 信箱197 操作34
+    //   表頭實測(px)：狀態58 姓名29 帳號29 部門58 角色29 員編58 手機29  信箱55  操作29（表頭 14px）
+    //   ⚠️ 每欄取「內容」與「表頭」兩者的**較大值**再 +32 padding。第一版只看內容寬度，
+    //      員工編號因此只拿到 83px（內容 51+32），但表頭「員工編號」四個字要 54px，
+    //      結果表頭自己換行——欄寬校正一定要把表頭一起算進去。
+    //      表頭字級後來從 13px 調到 14px（見 .data-table th 的註解），表頭需求整批變寬，
+    //      員編這欄因此改由「表頭」決定寬度（58 > 內容的 51）；狀態欄兩者剛好都是 58。
+    //   配置(px)：    90    81    121   130   114   90    164    240     66  = 1096
+    // 極端值那列（Alexander／UAE 門號／TECH-2024-0012）仍會換行，是刻意的例外。
+    // 批次模式多一欄 checkbox（4%），這 4% 全部從 E-mail 的餘裕扣，其他欄維持不變，
+    // 避免動到已經零餘裕的狀態/手機欄。
+    //
+    // ⚠️ 為什麼要兩套比例：百分比會等比例縮放**每一欄**，所以「在 1096px 剛剛好」的比例
+    // 拿到 936px（約 1280 視窗）用，會把已經零餘裕的狀態/角色/手機一起壓到換行。
+    // 窄桌機改用另一套比例：短欄位照實際需求給足（配合 ≤1366px 的 padding 12px），
+    // 差額集中由 E-mail 吸收、只有它換成兩行。
+    const narrow = window.innerWidth <= 1366;
+    const W = narrow
+      ? (bulkMode
+        // 936px／padding 24：短欄位 = max(內容, 表頭) + 24，餘額給 E-mail；批次的 4% 一樣從 E-mail 扣
+        ? { check: 4, status: 8.76, name: 7.80, account: 12.07, dept: 13.03, role: 11.32, empNo: 8.76, phone: 16.67, email: 11.38, actions: 6.20 }
+        : { status: 8.76, name: 7.80, account: 12.07, dept: 13.03, role: 11.32, empNo: 8.76, phone: 16.67, email: 15.38, actions: 6.20 })
+      : (bulkMode
+        ? { check: 4, status: 8.21, name: 7.39, account: 11.04, dept: 11.86, role: 10.40, empNo: 8.21, phone: 14.96, email: 17.90, actions: 6.02 }
+        : { status: 8.21, name: 7.39, account: 11.04, dept: 11.86, role: 10.40, empNo: 8.21, phone: 14.96, email: 21.90, actions: 6.02 });
     const checkHeadCell = bulkMode ? '<th class="col-check" style="width:' + W.check + '%">' + checkboxHtml(' id="selectAllChk"', false) + '</th>' : "";
     return '<div class="table-card"><div class="table-scroll"><table class="data-table is-interactive acct-table"><thead><tr>' + checkHeadCell +
       '<th style="width:' + W.status + '%">帳號狀態</th><th style="width:' + W.name + '%">姓名</th><th style="width:' + W.account + '%">帳號</th>' +
@@ -2193,16 +2234,18 @@
   function renderAccountsPage() {
     const isAdmin = state.demoRole === "companyAdmin";
     let html = '<div class="page-head"><h1>子帳號管理</h1></div>';
-    html += '<div class="page-sub">管理公司底下所有子帳號，建立、停用、指派部門與角色</div>';
-    html += '<div class="org-shell">';
-    if (isAdmin) html += renderOrgTree();
+    // 2026-08-13：拿掉 page-sub 說明句（頁面本身已經看得出來在做什麼，那句是贅述）
+    // 2026-08-13：拿掉左右並排的 .org-shell／.org-tree，改成上下堆疊——
+    // 部門 chip 列在最上面（只有企業管理員看得到，部門管理員本來就只能管自己那一個部門），
+    // 表格因此拿回整個內容區寬度
     html += '<div class="org-main">';
+    if (isAdmin) html += renderDeptChips();
     if (!isAdmin) html += renderDeptContextLine(DEMO_DEPT_FOR_MANAGER);
     if (isAdmin) html += '<div id="deptContextWrap">' + renderDeptContext() + '</div>';
     html += renderFilterBar();
     html += '<div id="bulkBarWrap">' + renderBulkBar() + '</div>';
     html += '<div id="orgAccountsListWrap">' + renderAccountsList() + '</div>';
-    html += '</div></div>';
+    html += '</div>';
     return html;
   }
 
@@ -2211,6 +2254,19 @@
       btn.classList.toggle("active", btn.getAttribute("data-tree") === orgState.deptFilter);
     });
   }
+  // 欄寬有寬／窄兩套比例（見 renderAccountsList），比例是在 render 當下依視窗寬度選的，
+  // 所以拖拉視窗跨過 1366 這個分界時要重畫一次列表，否則會停在舊那套比例。
+  // 只在真的跨過分界時才重畫（不是每個 resize 事件都重畫），避免拖拉過程一直重繪；
+  // 也只在帳號列表存在時才動作，其他頁面不受影響。
+  (function () {
+    let wasNarrow = window.innerWidth <= 1366;
+    window.addEventListener("resize", function () {
+      const isNarrow = window.innerWidth <= 1366;
+      if (isNarrow === wasNarrow) return;
+      wasNarrow = isNarrow;
+      if (document.getElementById("orgAccountsListWrap")) refreshAccountsList();
+    });
+  })();
   // 部門樹／部門篩選 → 除了重畫列表，還要重畫「部門情境列」（部門名稱＋主管）
   function refreshAccountsScope() {
     const ctxWrap = document.getElementById("deptContextWrap");
@@ -2236,7 +2292,6 @@
         const searchEl = document.getElementById("acctSearch");
         if (searchEl) searchEl.value = "";
         syncOrgTreeActive();
-        ddSetValue("acctDeptFilter", "all", { silent: true });
         ddSetValue("acctRoleFilter", "all", { silent: true });
         ddSetValue("acctStatusFilter", "all", { silent: true });
         refreshAccountsScope();
@@ -2347,13 +2402,12 @@
     bindListRowActions();
     const searchEl = document.getElementById("acctSearch");
     if (searchEl) searchEl.addEventListener("input", function () { orgState.search = this.value; refreshAccountsList(); });
-    ddBind("acctDeptFilter");
     ddBind("acctRoleFilter");
     ddBind("acctStatusFilter");
+    // 部門 chip（data-tree 沿用原本組織樹的 attribute 名稱）
     document.querySelectorAll("[data-tree]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         orgState.deptFilter = btn.getAttribute("data-tree");
-        ddSetValue("acctDeptFilter", orgState.deptFilter, { silent: true });
         syncOrgTreeActive();
         refreshAccountsScope();
       });
