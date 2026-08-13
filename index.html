@@ -12,6 +12,7 @@
     --surface: #FFFFFF;      /* color/bg/surface */
     --surface-2: #F3EDE4;    /* 實驗值：暖灰，取代原本偏藍的 neutral/100 */
     --border: #E7E0D5;       /* 實驗值：暖灰邊框，取代原本偏藍的 neutral/200 */
+    --border-hover: #CBBFB4; /* color/border/hover · neutral/300，2026-08-11 從 Figma Select 元件抓的，這檔案之前沒有這個 token */
     --text: #2C2324;         /* 實驗值：暖黑，取代原本偏藍的 neutral/700 */
     --text-muted: #79706A;   /* 實驗值：暖中灰，取代原本偏藍的 neutral/500 */
     --text-disabled: #A79E97;/* 實驗值：暖淺灰，取代原本偏藍的 neutral/400 */
@@ -32,6 +33,21 @@
     --shadow: var(--shadow-md); /* 沿用既有變數名稱，映射到 md 供 popover 使用 */
     --font-ui: "Inter", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
     --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+    /* ===== Type Scale（2026-08-12，驗證用——官方設計系統的六階，之前沒畫面時訂的 28/20/16/14/13/12，
+       現在依實際介面往上調。先在這個檔案（登入後平台／組織與子帳號模組）套用驗證，Alvie 看過畫面
+       確認 OK 才會回寫 Figma。命名沿用 --fs-*／--fw-* 這個檔案既有的變數風格（跟 auth-tokens.css
+       同一套慣例），新增 --lh-* 做行高，三者成套、同一階的 size/line-height/weight 綁在一起用。
+       字重只保留 Regular/Medium/Bold 三個六階會用到的，既有其他地方寫死的 500/600/700 不受影響、
+       這次沒有全面盤點/取代非六階範圍的 font-weight（範圍照 Alvie 指示只做 font-size+行高） */
+    --fs-display: 30px; --lh-display: 40px; /* Display・頁面主標題、KPI 大數字 */
+    --fs-heading: 22px; --lh-heading: 30px; /* Heading・卡片/區塊標題 */
+    --fs-subhead: 18px; --lh-subhead: 26px; /* Subhead・抽屜/對話框標題、次級標題 */
+    --fs-body:    16px; --lh-body:    26px; /* Body・主要內文、表格內容、表單文字，介面預設 */
+    --fs-small:   14px; --lh-small:   22px; /* Small・次要文字、按鈕、導覽項目 */
+    --fs-caption: 13px; --lh-caption: 18px; /* Caption・標籤、表頭、輔助說明、徽章 */
+    --fw-regular: 400;
+    --fw-medium:  500;
+    --fw-bold:    700;
     /* chart 進場動畫：時長／easing 統一由這兩個 token 控制，不要各 chart 各自寫死 */
     --chart-anim-duration: 700ms;
     --chart-anim-easing: ease-out;
@@ -52,8 +68,8 @@
     font-family: var(--font-ui);
     background: var(--bg);
     color: var(--text);
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: var(--fs-body); /* Body・介面預設，2026-08-12 從 14 調到 16 */
+    line-height: var(--lh-body);
   }
   button { font-family: inherit; font-size: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -122,7 +138,7 @@
   .nav-row.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .nav-row .ico { flex-shrink: 0; width: 18px; height: 18px; opacity: .85; }
   .nav-row.active .ico { opacity: 1; }
-  .nav-row .label { flex: 1; font-size: 15px; }
+  .nav-row .label { flex: 1; font-size: var(--fs-body); line-height: var(--lh-body); }
   /* 預設指下（暗示點了會往下展開），展開後轉 180 度變指上（暗示點了會收合回去）——
      跟子項目往下展開的方向一致，不是 360 度繞一圈的裝飾轉場 */
   .nav-row .chev { width: 14px; height: 14px; flex-shrink: 0; opacity: .55; transition: transform var(--nav-chev-duration) var(--nav-chev-easing); }
@@ -169,13 +185,13 @@
     text-align: left;
     cursor: pointer;
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: var(--fs-body); line-height: var(--lh-body);
   }
   .nav-child:hover { background: var(--accent-soft); color: var(--text); }
   .nav-child.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .nav-child .label { flex: 1; }
   .p2-badge {
-    font-size: 10px;
+    font-size: var(--fs-caption);
     font-weight: 700;
     letter-spacing: .02em;
     color: var(--phase2);
@@ -219,21 +235,21 @@
     padding-bottom: 10px; margin-bottom: 10px;
     border-bottom: 1px solid rgba(44,35,36,.16);
   }
-  .points-card .pc-name { font-weight: 700; font-size: 14px; }
+  .points-card .pc-name { font-weight: 700; font-size: var(--fs-small); line-height: var(--lh-small); }
   .points-card .pc-plan {
-    font-size: 10.5px; font-weight: 700; letter-spacing: .02em;
+    font-size: var(--fs-caption); font-weight: 700; letter-spacing: .02em;
     background: rgba(44,35,36,.12); padding: 2px 9px; border-radius: 999px;
   }
   .points-card .pc-label {
     display: flex; align-items: center; gap: 5px;
-    font-size: 11.5px; color: rgba(44,35,36,.72); margin-bottom: 2px;
+    font-size: var(--fs-caption); color: rgba(44,35,36,.72); margin-bottom: 2px;
   }
   .points-card .pc-label .ico { width: 12px; height: 12px; opacity: .7; }
-  .points-card .pc-value { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
-  .points-card .pc-value .unit { font-size: 11.5px; font-weight: 500; opacity: .7; margin-left: 3px; }
+  .points-card .pc-value { font-size: var(--fs-heading); line-height: var(--lh-heading); font-weight: 700; margin-bottom: 10px; }
+  .points-card .pc-value .unit { font-size: var(--fs-caption); font-weight: 500; opacity: .7; margin-left: 3px; }
   .points-card .pc-usage-row {
     display: flex; align-items: baseline; justify-content: space-between;
-    font-size: 11.5px; font-weight: 500; margin-bottom: 5px; color: rgba(44,35,36,.75);
+    font-size: var(--fs-caption); font-weight: 500; margin-bottom: 5px; color: rgba(44,35,36,.75);
   }
   .points-card .pc-usage-row .num { font-variant-numeric: tabular-nums; }
   .points-card .pc-bar {
@@ -245,7 +261,7 @@
     position: relative;
     width: 100%; padding: 9px 0; border-radius: var(--radius-md);
     border: none; background: #fff;
-    color: var(--accent); font-weight: 700; font-size: 13px; cursor: pointer;
+    color: var(--accent); font-weight: 700; font-size: var(--fs-small); line-height: var(--lh-small); cursor: pointer;
     box-shadow: 0 1px 3px rgba(0,0,0,.10);
     overflow: hidden;
   }
@@ -261,7 +277,7 @@
 
   .sidebar-hint {
     padding: 12px 16px 16px;
-    font-size: 11.5px;
+    font-size: var(--fs-caption);
     color: var(--text-muted);
   }
 
@@ -288,19 +304,19 @@
   .icon-btn .ico { width: 21px; height: 21px; }
   .avatar-btn {
     width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: var(--accent-contrast);
-    border: none; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;
+    border: none; display: flex; align-items: center; justify-content: center; font-size: var(--fs-small); font-weight: 700;
     cursor: pointer; margin-left: 8px;
   }
   .popover {
     position: absolute; top: 50px; right: 0; width: 240px; background: var(--surface);
     border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
-    padding: 12px 14px; font-size: 12.5px; color: var(--text-muted); z-index: 20; display: none;
+    padding: 12px 14px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text-muted); z-index: 20; display: none;
   }
   .popover.open { display: block; }
-  .popover .t { color: var(--text); font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .popover .t { color: var(--text); font-weight: 600; font-size: var(--fs-caption); margin-bottom: 4px; }
   .popover button.logout {
     margin-top: 8px; width: 100%; padding: 7px 0; border-radius: var(--radius-md); border: 1px solid var(--border);
-    background: var(--surface-2); color: var(--text); cursor: pointer; font-size: 12.5px;
+    background: var(--surface-2); color: var(--text); cursor: pointer; font-size: var(--fs-caption);
   }
   .popover button.logout:hover { background: var(--bg); }
 
@@ -309,40 +325,40 @@
   .proto-note {
     display: flex; gap: 10px; align-items: flex-start; background: var(--surface);
     border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 28px;
-    font-size: 12.5px; color: var(--text-muted); max-width: 640px;
+    font-size: var(--fs-caption); color: var(--text-muted); max-width: 640px;
   }
   .proto-note .ico { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; color: var(--accent); }
   .proto-note b { color: var(--text); }
 
   .page-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
-  .page-head h1 { font-size: 28px; line-height: 36px; font-weight: 700; margin: 0; text-wrap: balance; }
-  .page-sub { font-size: 13.5px; color: var(--text-muted); margin: 8px 0 24px; }
+  .page-head h1 { font-size: var(--fs-display); line-height: var(--lh-display); font-weight: 700; margin: 0; text-wrap: balance; }
+  .page-sub { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); margin: 8px 0 24px; }
 
   .tabbar { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 22px; flex-wrap: wrap; }
   .tab {
-    padding: 11px 16px; font-size: 14px; color: var(--text-muted); background: none; border: none;
+    padding: 11px 16px; font-size: var(--fs-body); color: var(--text-muted); background: none; border: none;
     border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px; white-space: nowrap;
   }
   .tab:hover { color: var(--text); }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 
   .detail-note {
-    font-size: 13px; color: var(--text-muted); margin: -6px 0 18px; max-width: 640px;
+    font-size: var(--fs-caption); color: var(--text-muted); margin: -6px 0 18px; max-width: 640px;
   }
 
   .flag-note {
     display: flex; gap: 8px; align-items: flex-start; background: var(--phase2-soft);
     border: 1px solid color-mix(in srgb, var(--phase2) 30%, transparent);
-    border-radius: var(--radius-md); padding: 10px 12px; margin: 0 0 18px; font-size: 12.5px; color: var(--text);
+    border-radius: var(--radius-md); padding: 10px 12px; margin: 0 0 18px; font-size: var(--fs-caption); color: var(--text);
     max-width: 640px;
   }
   .flag-note .ico { width: 15px; height: 15px; color: var(--phase2); flex-shrink: 0; margin-top: 1px; }
 
   .placeholder-card {
     border: 1.5px dashed var(--border); border-radius: var(--radius-lg); padding: 32px 24px; text-align: center;
-    color: var(--text-muted); font-size: 13.5px; background: var(--surface); max-width: 640px;
+    color: var(--text-muted); font-size: var(--fs-small); line-height: var(--lh-small); background: var(--surface); max-width: 640px;
   }
-  .placeholder-card .big { font-size: 15px; color: var(--text); font-weight: 600; margin-bottom: 6px; }
+  .placeholder-card .big { font-size: var(--fs-subhead); line-height: var(--lh-subhead); color: var(--text); font-weight: 600; margin-bottom: 6px; }
 
   /* ---------- 總覽儀表板（2026-07-28 定案：TailAdmin/Horizon 版面結構 + E8D token） ---------- */
   /* 12 欄統一格線：兩列都在同一個 1180px 寬度內，且在第 6 欄對齊 —
@@ -369,23 +385,23 @@
     display: flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0;
   }
   .stat-card .s-icon .ico { width: 22px; height: 22px; }
-  .stat-card .s-label { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+  .stat-card .s-label { font-size: var(--fs-caption); color: var(--text-muted); margin-bottom: 10px; }
   .stat-card .s-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-  .stat-card .s-value { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1.1; }
-  .stat-card .s-delta { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .stat-card .s-value { font-size: var(--fs-display); font-weight: 700; color: var(--text); line-height: var(--lh-display); }
+  .stat-card .s-delta { display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-caption); font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
   .stat-card .s-delta.up { color: #0C9D61; background: #E5F5EC; }
   .stat-card .s-delta.down { color: #EC2D30; background: #FFEBEE; }
   .stat-card .s-delta .ico { width: 10px; height: 10px; }
-  .stat-card .s-compare { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
+  .stat-card .s-compare { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 8px; }
 
   .chart-card { background: var(--surface); border-radius: var(--radius-xl); padding: 24px 24px 20px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; }
   .chart-card .cc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .chart-card h3 { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; }
-  .chart-card .cc-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .chart-card h3 { font-size: var(--fs-subhead); line-height: var(--lh-subhead); font-weight: 700; color: var(--text); margin: 0; }
+  .chart-card .cc-sub { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 3px; }
 
   .chart-period-tabs { display: flex; gap: 2px; background: var(--surface-2); border-radius: var(--radius-md); padding: 3px; flex-shrink: 0; }
   .chart-period-tabs button {
-    border: none; background: none; padding: 6px 12px; font-size: 12.5px; font-weight: 600;
+    border: none; background: none; padding: 6px 12px; font-size: var(--fs-small); font-weight: 600;
     color: var(--text-muted); border-radius: 6px; cursor: pointer; white-space: nowrap; font-family: inherit;
   }
   .chart-period-tabs button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
@@ -393,7 +409,7 @@
   .chart-wrap { position: relative; margin-top: 16px; flex: 1; display: flex; align-items: center; }
   .chart-wrap svg { display: block; width: 100%; flex: 1; height: auto; overflow: visible; }
   .chart-wrap text { font-family: var(--font-ui); }
-  .chart-axis-label { font-size: 10.5px; fill: var(--text-muted); }
+  .chart-axis-label { font-size: var(--fs-caption); fill: var(--text-muted); }
   .chart-grid line { stroke: var(--border); stroke-width: 1; }
   .chart-crosshair { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; pointer-events: none; }
   .chart-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; opacity: 0; pointer-events: none; }
@@ -431,17 +447,17 @@
   .chart-tooltip {
     position: absolute; pointer-events: none; z-index: 5; opacity: 0;
     background: var(--text); color: #fff; border-radius: 8px; padding: 8px 12px;
-    font-size: 12px; white-space: nowrap; box-shadow: var(--shadow-lg);
+    font-size: var(--fs-caption); white-space: nowrap; box-shadow: var(--shadow-lg);
     transform: translate(-50%, calc(-100% - 14px)); transition: opacity .1s ease; left: 0; top: 0;
   }
-  .chart-tooltip .tt-label { color: rgba(255,255,255,.68); font-size: 11px; margin-bottom: 3px; }
+  .chart-tooltip .tt-label { color: rgba(255,255,255,.68); font-size: var(--fs-caption); margin-bottom: 3px; }
   .chart-tooltip .tt-row { display: flex; align-items: center; gap: 6px; }
   .chart-tooltip .tt-row + .tt-row { margin-top: 3px; }
   .chart-tooltip .tt-key { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
   .chart-tooltip .tt-value { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: auto; padding-left: 10px; }
 
   .chart-legend { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
-  .chart-legend .lg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+  .chart-legend .lg-item { display: flex; align-items: center; gap: 6px; font-size: var(--fs-caption); color: var(--text-muted); }
   .chart-legend .lg-key { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 
   .bar-mark { cursor: pointer; }
@@ -450,9 +466,9 @@
   .bar-mark:focus { outline: none; }
 
   .contract-card { background: var(--surface); border-radius: var(--radius-xl); padding: 24px; box-shadow: var(--shadow-card); }
-  .contract-card h3 { font-size: 15px; font-weight: 700; margin: 0 0 6px; color: var(--text); }
-  .contract-card .cc-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
-  .contract-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .contract-card h3 { font-size: var(--fs-subhead); line-height: var(--lh-subhead); font-weight: 700; margin: 0 0 6px; color: var(--text); }
+  .contract-card .cc-sub { font-size: var(--fs-caption); color: var(--text-muted); margin: 0 0 12px; }
+  .contract-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: var(--fs-caption); }
   .contract-row:last-child { border-bottom: none; padding-bottom: 0; }
   .contract-row dt { margin: 0; color: var(--text-muted); }
   .contract-row dd { margin: 0; color: var(--text); font-weight: 600; text-align: right; }
@@ -463,16 +479,365 @@
     border-radius: var(--radius-lg); padding: 26px; max-width: 560px; box-shadow: var(--shadow-sm);
   }
   .ext-card .ico { width: 22px; height: 22px; color: var(--accent); flex-shrink: 0; margin-top: 2px; }
-  .ext-card h2 { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
-  .ext-card p { margin: 0; font-size: 13.5px; color: var(--text-muted); }
+  .ext-card h2 { font-size: var(--fs-heading); line-height: var(--lh-heading); font-weight: 700; margin: 0 0 8px; }
+  .ext-card p { margin: 0; font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); }
 
-  .toast {
-    position: fixed; bottom: 22px; right: 22px; background: var(--text); color: var(--bg);
-    padding: 10px 16px; border-radius: var(--radius-md); font-size: 12.5px; box-shadow: var(--shadow-lg);
-    opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .18s ease, transform .18s ease;
-    z-index: 50;
+  /* ============================================================
+     組織與子帳號模組（2026-08-11）
+     ------------------------------------------------------------
+     這批樣式支援全站第一個「真的能操作」的模組（篩選/表格/抽屜/樹狀）。
+     沿用既有卡片語言（surface + radius-xl + shadow-card），沒有另外發明新的圓角/陰影階。
+     ============================================================ */
+
+  /* ---- 通用按鈕（此檔案先前沒有按鈕元件，比照 E8D Button 規格：Primary/Secondary/Text/Danger-text） ---- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 36px; padding: 0 16px; border-radius: var(--radius-md);
+    font-family: var(--font-ui); font-size: var(--fs-body); font-weight: 600; cursor: pointer;
+    border: 1px solid transparent; white-space: nowrap; flex-shrink: 0;
+    transition: background .12s ease, border-color .12s ease, color .12s ease;
   }
-  .toast.show { opacity: 1; transform: translateY(0); }
+  .btn .ico { width: 15px; height: 15px; }
+  .btn-sm { height: 32px; padding: 0 12px; font-size: var(--fs-body); }
+  .btn-primary { background: var(--accent); color: var(--accent-contrast); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:active { background: var(--accent-active); }
+  .btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .btn-secondary:hover { border-color: var(--text-disabled); background: var(--surface-2); }
+  .btn-text { background: none; color: var(--accent); border: none; padding: 0; height: auto; font-size: var(--fs-body); font-weight: 600; cursor: pointer; transition: color .12s ease; }
+  .btn-text:hover { color: var(--accent-active); } /* 2026-08-11：Alvie 不喜歡底線，改用深一階橘色（primary/900）表示 hover */
+  .btn-danger-text { background: none; border: none; padding: 0; height: auto; color: #EC2D30; font-weight: 600; font-family: var(--font-ui); font-size: var(--fs-body); cursor: pointer; transition: color .12s ease; }
+  .btn-danger-text:hover { color: #D8262B; } /* 2026-08-11：跟 .btn-text 同一次修正，拿掉底線改深一階紅（danger/800，跟 .btn-danger 的 hover 同一個色） */
+  .btn-danger { background: #EC2D30; color: #fff; }
+  .btn-danger:hover { background: #D8262B; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn:disabled:hover { background: inherit; }
+
+  /* ============================================================
+     自訂 Dropdown（2026-08-11 第三輪，取代原本的原生 <select>）
+     ------------------------------------------------------------
+     原生 <select> 的展開選單完全是瀏覽器原生渲染，沒辦法套用任何自訂樣式，
+     這就是「面板位置/樣式跟系統對不上」的根本原因，不是哪個下拉少寫了位移。
+     改成 button 觸發 + fixed 定位面板，全站共用同一套引擎（見下方 script 的
+     ddOpen/ddClose/positionDdPanel），樣式數值全部從 Figma「E8D · Select & Dropdown」
+     頁（node 177:156／182:111）讀出來，不是自己配的：
+     觸發框＝border var(--border)、hover 邊框 var(--border-hover)、focus 邊框
+     var(--accent)+外部光暈 rgba(255,100,22,.16)；面板＝白底+邊框+陰影(E8D/Shadow/md
+     實際 rgba 值)+4px 上下 padding；選項＝8px/12px padding、hover 底色 var(--bg)
+     （Figma 定義的 bg/hover 實際上就是這個很淺的米白，不是本檔案原本另外在用的
+     --surface-2，兩個是不同 token，之前搞混了）、選中態只有勾勾變橘色，文字顏色不變
+     （這個「選中列文字沒對齊其他列」的視覺是 Figma 原始設計本來就這樣，照樣重現）。
+     ============================================================ */
+  .dd { position: relative; }
+  .dd-trigger {
+    display: flex; align-items: center; gap: 8px; width: 100%; height: 36px;
+    padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border);
+    background: var(--surface); cursor: pointer; font-family: var(--font-ui); font-size: var(--fs-body); text-align: left;
+  }
+  .dd-trigger:hover { border-color: var(--border-hover); }
+  .dd-trigger.is-open { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,100,22,.16); }
+  .dd-trigger:disabled { background: var(--surface-2); color: var(--text-disabled); cursor: not-allowed; }
+  .dd-trigger .dd-label { flex: 1 0 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); line-height: 22px; }
+  .dd-trigger:disabled .dd-label { color: var(--text-disabled); }
+  .dd-trigger .dd-chev { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; transition: transform .15s ease; }
+  .dd-trigger.is-open .dd-chev { transform: rotate(180deg); }
+
+  .dd-panel {
+    position: fixed; z-index: 200; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 4px 0;
+    box-shadow: 0 4px 8px -2px rgba(26,21,18,.1), 0 2px 4px -2px rgba(26,21,18,.06);
+    max-height: 280px; overflow-y: auto;
+    opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity .12s ease, transform .12s ease;
+  }
+  .dd-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .dd-item {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; box-sizing: border-box;
+    border: none; background: none; cursor: pointer; text-align: left;
+    font-family: var(--font-ui); font-size: var(--fs-body); color: var(--text); line-height: var(--lh-body);
+  }
+  .dd-item:hover { background: var(--bg); }
+  .dd-item .dd-check { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
+
+  /* ---- 篩選列（即時過濾，無查詢按鈕） ---- */
+  .filter-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filter-search { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
+  .filter-search .ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-muted); pointer-events: none; }
+  .filter-search input {
+    width: 100%; height: 36px; padding: 0 12px 0 36px; border-radius: var(--radius-md); border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: var(--fs-body); line-height: var(--lh-body); font-family: var(--font-ui);
+  }
+  .filter-search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .filter-bar .dd { width: 148px; }
+  .filter-bar-spacer { flex: 1; }
+
+  /* ---- 組織樹（帳號主頁左側，企業管理員可見；部門管理員改用 .dept-context 小字，見下方） ---- */
+  .org-shell { display: flex; align-items: flex-start; gap: 20px; }
+  .org-tree { width: 216px; flex-shrink: 0; background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); padding: 10px; }
+  .org-tree-company { display: flex; align-items: center; gap: 8px; padding: 8px 10px 10px; font-size: var(--fs-small); line-height: var(--lh-small); font-weight: 700; color: var(--text); border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+  .org-tree-company .ico { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; }
+  .org-tree-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left;
+    padding: 8px 10px; border-radius: var(--radius-md); border: none; background: none; cursor: pointer;
+    font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text); font-family: var(--font-ui);
+  }
+  .org-tree-item:hover { background: var(--bg); } /* 2026-08-11：跟表格 hover 統一改淺，原本借用 --surface-2 太重 */
+  .org-tree-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .org-tree-item .cnt { font-size: var(--fs-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .org-tree-item.active .cnt { color: var(--accent); }
+  .org-main { flex: 1; min-width: 0; }
+
+  /* ---- 表格卡片 ---- */
+  .table-card { background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); overflow: hidden; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); line-height: var(--lh-body); }
+  .data-table th {
+    text-align: left; font-size: var(--fs-caption); font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: .03em; padding: 12px 16px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .data-table td { padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  /* 2026-08-11：hover 只給「整列可互動」的表格（帳號、部門），讀唯讀表格（權限總覽）不套 .is-interactive
+     不會有 hover，避免使用者誤以為能點。色值照 Figma Table Row 元件的 Hover 狀態＝var(--bg)，
+     比原本借用的 --surface-2 淺很多，也讓橘色操作連結在上面更容易辨識 */
+  .data-table.is-interactive tbody tr:hover td { background: var(--bg); }
+  /* 2026-08-12：拿掉 white-space:nowrap、row-actions 改可換行——這是最後一道防線：
+     欄寬已經用百分比鎖死、理論上不會超出容器，但「編輯／刪除」文字連結萬一在極窄視窗
+     真的擠不下，寧可讓它自己疊成兩行，也不要讓文字溢出把表格撐出橫向捲軸（那正是
+     Alvie 反映的問題——操作欄被切出可視範圍） */
+  .data-table .col-actions { text-align: right; }
+  .data-table .row-actions { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 14px; }
+  .data-table .muted { color: var(--text-muted); }
+  .data-table .name-cell { font-weight: 600; }
+  /* 識別碼類欄（員工編號／手機／部門代碼／帳號數）固定不換行——這些是完整識別字串，
+     拆行反而難辨認，寧可欄位給足寬度也不要折成兩行（2026-08-12） */
+  /* overflow:hidden 是防呆：欄寬在絕大多數桌機寬度下都夠用（已實測），只有「視窗很窄＋
+     剛好遇到極端長的員編/門號」這種罕見組合才會頂到邊界——與其讓文字溢出跟隔壁欄「打架」
+     （nowrap 不換行的內容溢出不會撐開表格，但會視覺上疊到鄰欄），寧可安靜裁掉超出的部分 */
+  .data-table .num-cell { font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+
+  /* ---- 狀態 badge（dot 版，沿用系統色票 hex，跟 .stat-card .s-delta 同一組） ---- */
+  .badge-dot { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: var(--radius-full); font-size: var(--fs-caption); font-weight: 600; white-space: nowrap; }
+  .badge-dot .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .badge-dot.is-active { background: #E5F5EC; color: #0C9D61; }
+  .badge-dot.is-active .dot { background: #0C9D61; }
+  .badge-dot.is-disabled { background: var(--surface-2); color: var(--text-muted); }
+  .badge-dot.is-disabled .dot { background: var(--text-disabled); }
+
+  /* ---- 部門情境列（點選部門樹後，列表上方顯示部門名稱＋主管） ---- */
+  .dept-context { display: flex; align-items: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; color: var(--text); margin: -4px 0 14px; }
+  .dept-context .ico { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+
+  /* ---- 批次操作：選取模式列首 checkbox／浮出的操作列（checkbox 樣式見 .chk，跟系統元件同一套）---- */
+  /* 欄寬改由表頭 th 的 inline % 決定（table-layout:fixed 只吃第一列的寬度），這裡不寫死 px */
+  .data-table td.col-check, .data-table th.col-check { padding-right: 0; }
+  .bulk-bar {
+    display: flex; align-items: center; gap: 12px; background: var(--accent-soft);
+    border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px;
+  }
+  .bulk-bar .bb-count { font-size: var(--fs-caption); font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .bulk-bar-spacer { flex: 1; }
+
+  /* ---- 空狀態 ---- */
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 64px 24px; }
+  /* 2026-08-12 修正：原本是後代選擇器 .empty-state .ico，跟 .btn .ico（15px/白色）specificity
+     打平，CSS 順序後寫的贏，結果連按鈕裡的「+」icon 都被吃成 40px 灰色——按鈕那顆是巢狀在
+     button 裡（.empty-state > button > svg），不是 .empty-state 的直接子節點，改用子選擇器
+     只鎖定最上面那顆說明用的大 icon，不會再誤傷按鈕內的 icon */
+  .empty-state > .ico { width: 40px; height: 40px; color: var(--text-disabled); margin-bottom: 14px; }
+  .empty-state p { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); margin: 0 0 18px; }
+
+  /* ---- 表格固定寬度、長內容欄位內換行（2026-08-12 第二版，取代原本的截斷＋tooltip）：
+     table-layout:fixed 讓表格寬度只由 th 的 width 決定，內容再長也不會把表格撐寬、
+     不會把「操作」欄擠出可視範圍。姓名／帳號／所屬部門／E-mail 用 .wrap-cell，
+     內容超出欄寬時往下換行、列高跟著增加，完整資料一律看得到，不再靠 hover 才看到全文，
+     所以這幾欄也拿掉了 tooltip（data-tip 屬性直接不掛，不用改 tooltip 引擎本身——
+     頂部圖示那組 tooltip 沒受影響，兩者共用同一套引擎，差別只在有沒有掛 data-tip）。
+     .table-scroll 留著當窄視窗的保護網，正常桌機寬度下欄寬加總不會觸發它 */
+  .table-scroll { overflow-x: auto; }
+  .data-table.acct-table, .data-table.dept-table { table-layout: fixed; }
+  .data-table td.wrap-cell { overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+
+  /* ---- Tooltip：系統缺口，這裡先在原型定案方向（深底白字，跟 popover/dd-panel 的白底
+     淺色系區隔開，才看得出「這是提示不是可互動面板」），之後要收進 Figma 做成正式元件 ---- */
+  .cell-tip {
+    position: fixed; z-index: 300; max-width: 320px; padding: 6px 10px;
+    background: var(--text); color: var(--surface); font-size: var(--fs-caption); line-height: var(--lh-caption);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+    opacity: 0; transform: translateY(-4px); pointer-events: none;
+    transition: opacity .12s ease, transform .12s ease; word-break: break-word;
+  }
+  .cell-tip.open { opacity: 1; transform: translateY(0); }
+
+  /* ---- 開關（Toggle）：系統缺口，目前只有 Checkbox/Radio，先照既有色彩語言畫一版 ---- */
+  .toggle { position: relative; display: inline-flex; align-items: center; width: 40px; height: 22px; flex-shrink: 0; }
+  .toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+  .toggle .track { position: absolute; inset: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-full); transition: background .15s ease, border-color .15s ease; }
+  /* 2026-08-11 修正：thumb 原本 top/left 都是 2px，但 .track 還多吃掉 1px 邊框，
+     實際看起來上方留白 2px、下方留白變成快 4px，圓圈偏上不居中。改成 top/left 都 3px
+     （對稱扣掉邊框），checked 位移量隨之從 18px 重算：40 - 16 - 3 - 3 = 18px，數字沒變但基準對了 */
+  .toggle .thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.15); transition: transform .15s ease; }
+  .toggle input:checked ~ .track { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked ~ .thumb { transform: translateX(18px); }
+  .toggle input:disabled ~ .track { opacity: .5; cursor: not-allowed; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
+  .toggle-row .tr-label { font-size: var(--fs-small); color: var(--text); font-weight: 600; }
+  .toggle-row .tr-sub { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 2px; }
+
+  /* ============================================================
+     Checkbox（2026-08-11：改成直接沿用 Figma「E8D · Checkbox & Radio」頁的規格，
+     取代原本借用瀏覽器原生 checkbox + accent-color 的做法——原生 checkbox 沒辦法照系統
+     控制圓角/勾號樣式，這就是「看起來粗糙、跟系統版本不一致」的根本原因）
+     18×18、radius/sm(4px)、勾號 12×12 白色細線，數值全部照 node 167:618 讀出來
+     ============================================================ */
+  .chk { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
+  .chk input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+  .chk .chk-box {
+    position: absolute; inset: 0; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    background: var(--surface); display: flex; align-items: center; justify-content: center;
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .chk .chk-box .ico { position: absolute; width: 12px; height: 12px; color: #fff; stroke-width: 2.5; opacity: 0; }
+  .chk input:hover ~ .chk-box { border-color: var(--border-hover); }
+  .chk input:checked ~ .chk-box, .chk input:indeterminate ~ .chk-box { background: var(--accent); border-color: var(--accent); }
+  .chk input:checked ~ .chk-box .ico-check { opacity: 1; }
+  .chk input:indeterminate:not(:checked) ~ .chk-box .ico-minus { opacity: 1; }
+  .chk input:disabled ~ .chk-box { background: var(--surface-2); border-color: var(--border); }
+  .chk input:disabled:checked ~ .chk-box, .chk input:disabled:indeterminate ~ .chk-box { border-color: transparent; }
+  .chk input:disabled ~ .chk-box .ico { color: var(--text-disabled); }
+  .chk input:disabled { cursor: not-allowed; }
+  .chk:has(input:disabled) { cursor: not-allowed; }
+
+  /* ---- 抽屜表單欄位 ---- */
+  .field-group { margin-bottom: 16px; }
+  .field-group label { display: block; font-size: var(--fs-caption); font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .field-group .req { color: #EC2D30; margin-left: 2px; }
+  .field-group input[type=text], .field-group input[type=password], .field-group input[type=email], .field-group input[type=tel] {
+    width: 100%; height: 36px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: var(--fs-body); line-height: var(--lh-body); font-family: var(--font-ui);
+  }
+  .field-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field-group input.is-error { border-color: #EC2D30; }
+  .field-group input.is-error:focus { box-shadow: 0 0 0 3px #FFEBEE; }
+  /* 唯讀欄位（例：編輯帳號時的「帳號」）：淡背景、不可聚焦，跟一般 disabled 灰階區隔開——
+     這是「本來就不給改」不是「暫時不能用」，用中性淡底色而非明顯的 disabled 樣式 */
+  .field-group input.is-readonly { background: var(--bg); color: var(--text-muted); cursor: not-allowed; }
+  .field-group input.is-readonly:focus { border-color: var(--border); box-shadow: none; }
+  .field-group .dd-trigger.is-error { border-color: #EC2D30; }
+  .field-group .hint { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 5px; }
+  .field-group .err-msg { font-size: var(--fs-caption); color: #EC2D30; margin-top: 5px; display: flex; align-items: center; gap: 4px; }
+  .field-group .err-msg .ico { width: 12px; height: 12px; flex-shrink: 0; }
+  .field-row { display: flex; gap: 10px; }
+  .field-row > .field-group { flex: 1; min-width: 0; }
+  .field-row .dial-code {
+    flex: 0 0 60px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-md); background: var(--surface-2); color: var(--text-muted); font-size: var(--fs-body); line-height: var(--lh-body); font-variant-numeric: tabular-nums;
+  }
+  .field-divider { height: 1px; background: var(--border); margin: 4px 0 20px; }
+  .field-section-title { font-size: var(--fs-caption); font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; margin: 0 0 12px; }
+
+  /* ---- 角色→可用功能即時預覽 ---- */
+  .perm-preview { background: var(--surface-2); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 20px; }
+  .perm-preview .pp-title { font-size: var(--fs-caption); font-weight: 700; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .perm-preview .pp-title .ico { width: 14px; height: 14px; color: var(--accent); }
+  .perm-list { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+  .perm-item { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-caption); padding: 4px 9px; border-radius: var(--radius-full); background: var(--surface); color: var(--text); }
+  .perm-item .ico { width: 11px; height: 11px; color: #0C9D61; flex-shrink: 0; }
+  /* 2026-08-11：不用刪除線（一整區都是線太雜亂、有「被否決」的負面感），改成整個標籤淡化到
+     40% 透明度，靠「深色+綠勾」對上「淡化無勾」兩個線索疊加分辨有/沒有 */
+  .perm-item.is-off { opacity: .4; }
+
+  /* ---- 抽屜（Drawer）：系統缺口，照 Modal 語言（白底/圓角/陰影/footer 按鈕排版）自畫滑入版 ---- */
+  .drawer-mask { position: fixed; inset: 0; background: rgba(26,21,18,.45); z-index: 70; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+  .drawer-mask.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100%; width: 480px; max-width: 92vw;
+    background: var(--surface); box-shadow: var(--shadow-lg); z-index: 71;
+    display: flex; flex-direction: column; transform: translateX(100%); transition: transform .25s cubic-bezier(.4,0,.2,1);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .drawer-head h2 { font-size: var(--fs-subhead); line-height: var(--lh-subhead); font-weight: 700; margin: 0; color: var(--text); }
+  .drawer-close { width: 32px; height: 32px; border-radius: var(--radius-md); border: none; background: none; display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; flex-shrink: 0; }
+  .drawer-close:hover { background: var(--surface-2); color: var(--text); }
+  .drawer-close .ico { width: 18px; height: 18px; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 22px 24px; }
+  .drawer-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); flex-shrink: 0; }
+
+  /* ---- 確認 modal（沿用系統 Modal 定案：Danger/Confirm 無 ✕、footer 無分隔線） ---- */
+  .confirm-mask {
+    position: fixed; inset: 0; background: rgba(26,21,18,.45); z-index: 80;
+    display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .18s ease;
+  }
+  .confirm-mask.open { opacity: 1; pointer-events: auto; }
+  .confirm-modal {
+    width: 400px; max-width: 90vw; background: var(--surface); border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg); padding: 24px; transform: scale(.96); transition: transform .18s ease;
+  }
+  .confirm-mask.open .confirm-modal { transform: scale(1); }
+  .confirm-modal h3 { font-size: var(--fs-subhead); line-height: var(--lh-subhead); font-weight: 700; margin: 0 0 8px; color: var(--text); }
+  .confirm-modal p { font-size: var(--fs-body); color: var(--text-muted); margin: 0; line-height: var(--lh-body); }
+  .confirm-modal .cm-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+  .confirm-modal .field-group { margin: 16px 0 0; }
+
+  /* ---- 部門頁：inline 改名／指派主管 ---- */
+  .inline-edit { display: flex; align-items: center; gap: 6px; }
+  .inline-edit input {
+    height: 32px; padding: 0 10px; border-radius: var(--radius-md); border: 1px solid var(--accent);
+    font-size: var(--fs-body); line-height: var(--lh-body); font-family: var(--font-ui); width: 150px; color: var(--text);
+  }
+  .inline-edit input:focus { outline: none; }
+  .inline-edit button { width: 28px; height: 28px; border-radius: var(--radius-md); border: none; background: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted); flex-shrink: 0; }
+  .inline-edit button .ico { width: 15px; height: 15px; }
+  .inline-edit button.confirm { color: #0C9D61; }
+  .inline-edit button.confirm:hover { background: #E5F5EC; }
+  .inline-edit button.cancel:hover { background: var(--surface-2); color: var(--text); }
+  .manager-select { width: 150px; }
+
+  /* ---- TODO／待 PM 確認標記 ---- */
+  .todo-tag {
+    display: inline-flex; align-items: center; font-size: var(--fs-caption); font-weight: 700; padding: 2px 8px;
+    border-radius: var(--radius-full); background: var(--phase2-soft); color: var(--phase2);
+    vertical-align: middle; margin-left: 6px; letter-spacing: .02em; white-space: nowrap;
+  }
+
+  /* ---- Demo 身份切換列（純原型工具，不是產品功能；正式版整個移除）
+     沿用登入前流程已定案的「深色圓角藥丸狀態切換器」樣式，
+     刻意跟帳號卡（.points-card）完全脫鉤、獨立浮在畫面角落，避免使用者誤以為這是真實產品功能 ---- */
+  .demo-role-bar {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60;
+    display: flex; align-items: center; gap: 4px; padding: 8px 10px;
+    border-radius: var(--radius-full); background: rgba(44,35,36,.92); backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-lg); max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center;
+  }
+  .demo-role-bar .drb-tag { font-size: var(--fs-caption); color: rgba(255,255,255,.55); padding: 0 6px; white-space: nowrap; letter-spacing: .2px; }
+  .demo-role-bar button {
+    font-family: var(--font-ui); font-size: var(--fs-small); font-weight: 600; color: rgba(255,255,255,.78);
+    background: none; border: none; padding: 7px 12px; border-radius: var(--radius-full); cursor: pointer;
+    white-space: nowrap; transition: background .12s ease, color .12s ease;
+  }
+  .demo-role-bar button:hover { background: rgba(255,255,255,.10); color: #fff; }
+  .demo-role-bar button.active { background: var(--accent); color: #fff; }
+
+  @media (max-width: 900px) {
+    .org-shell { flex-direction: column; }
+    .org-tree { width: 100%; }
+  }
+
+  /* 2026-08-11：改成符合站內淺色暖調的成功 toast——白底卡片＋綠勾 icon，取代原本純黑底白字
+     （跟右上角 icon 區/右下角帳號卡不會撞到：頂部置中、topbar 下方，兩邊都在別的高度）。
+     全站共用同一個 #toast 節點跟 showToast()，訊息發送/儲值等頁面之後套用同一顆函式就會一致 */
+  .toast {
+    position: fixed; top: 84px; left: 50%; transform: translate(-50%, -8px);
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    padding: 12px 18px; border-radius: var(--radius-md); font-size: var(--fs-small); font-weight: 600;
+    /* 2026-08-12：原本用 shadow-lg（陰影階裡最重的一階，Modal/Drawer 那種強互動層級在用），
+       跟 toast「輕量、暫時浮現」的性質不符，改用卡片同一階 shadow-card，跟全站陰影層級一致 */
+    box-shadow: var(--shadow-card);
+    opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+    z-index: 300; max-width: calc(100vw - 48px);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast .ico { width: 18px; height: 18px; color: #0C9D61; flex-shrink: 0; }
 
   @media (max-width: 767px) {
     .content { padding: 18px 16px 32px; }
@@ -557,17 +922,17 @@
         </button>
       </div>
       <div class="topbar-actions">
-        <button class="icon-btn" id="btnAnnounce" title="重要公告" aria-label="重要公告">
+        <button class="icon-btn" id="btnAnnounce" data-tip="重要公告" aria-label="重要公告">
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
         </button>
         <div class="popover" id="popAnnounce"><div class="t">重要公告</div>全域元件・出現在 header，不佔用側邊欄空間。</div>
 
-        <button class="icon-btn" id="btnFaq" title="常見問題教學" aria-label="常見問題教學">
+        <button class="icon-btn" id="btnFaq" data-tip="常見問題教學" aria-label="常見問題教學">
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
         </button>
         <div class="popover" id="popFaq"><div class="t">常見問題教學</div>全域元件・同上，供各頁面共用的說明入口。</div>
 
-        <button class="icon-btn" id="btnApi" title="API 文件下載" aria-label="API 文件下載">
+        <button class="icon-btn" id="btnApi" data-tip="API 文件下載" aria-label="API 文件下載">
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
         </button>
         <div class="popover" id="popApi"><div class="t">API 文件下載</div>全域元件・給工程師串接用的文件入口。</div>
@@ -587,6 +952,23 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- 組織與子帳號模組：抽屜／確認框都是獨立於 #content 的固定節點，
+     這樣篩選帳號列表重繪 #content 時不會影響到正在開著的抽屜/確認框 -->
+<div class="drawer-mask" id="orgDrawerMask"></div>
+<div class="drawer" id="orgDrawer"></div>
+<div class="confirm-mask" id="orgConfirmMask"></div>
+
+<!-- Demo 身份切換列：純原型/測試工具，正式產品沒有這個功能，
+     使用者本人不能切換身份——這只是給 PM/開發模擬「不同身份登入分別看到什麼畫面」用的。
+     刻意跟帳號卡（左側 .points-card）脫鉤、獨立浮在畫面角落，見 CLAUDE.md 的相關筆記 -->
+<div class="demo-role-bar" id="demoRoleBar">
+  <span class="drb-tag">Demo：模擬登入身份</span>
+  <button data-demo-role="companyAdmin">企業管理員</button>
+  <button data-demo-role="deptManager">部門管理員</button>
+  <button data-demo-role="user">一般使用者</button>
+</div>
+
+<script src="country-codes.js"></script>
 <script>
 (function () {
   "use strict";
@@ -637,7 +1019,18 @@
     stackedMail: '<rect width="16" height="13" x="6" y="4" rx="2"/><path d="m22 7-7.1 3.78c-.57.3-1.23.3-1.8 0L6 7"/><path d="M2 8v11c0 1.1.9 2 2 2h14"/>',
     flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
     up: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
-    down: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>'
+    down: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+    mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    phone: '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.804 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    circleAlert: '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><path d="M12 16h.01"/>',
+    idCard: '<path d="M16 10h2"/><path d="M16 14h2"/><path d="M6.17 15a3 3 0 0 1 5.66 0"/><circle cx="9" cy="11" r="2"/><rect x="2" y="5" width="20" height="14" rx="2"/>',
+    minus: '<path d="M5 12h14"/>'
   };
   function icon(name, extra) {
     // 2026-07-31 修正：extra 若帶 class="..."，原本會跟下面固定寫死的 class="ico"
@@ -680,9 +1073,14 @@
       { id: "sub-points", label: "子帳號點數管理", tabs: ["立即撥點", "預約撥點"] },
       { id: "points-schedule-report", label: "撥點查詢", tabs: [] }
     ]},
+    // 2026-08-11 改版：原本「公司組織樹」+「子帳號管理」(部門維護/部門主管/部門所屬帳號 tabs)
+    // 縮成子帳號管理/部門兩項，部門主管併入部門頁直接指派，不再獨立分頁。
+    // 「權限總覽」頁 2026-08-12 Alvie 想清楚後決定不用這頁，正式拿掉（第五輪誤刪過一次、
+    // 第九輪復原過，這次是他確認過的決定，不是誤會）。這個群組不走下面通用的 tabs/placeholder
+    // 渲染，renderContent() 裡對 topItem.id === "org" 另外分流到專用渲染器。
     { id: "org", label: "組織與子帳號", kind: "group", icon: "org", children: [
-      { id: "org-tree", label: "公司組織樹", tabs: [] },
-      { id: "sub-account", label: "子帳號管理", tabs: ["部門維護", "部門主管", "部門所屬帳號"] }
+      { id: "org-accounts", label: "子帳號管理" },
+      { id: "org-departments", label: "部門" }
     ]},
     { id: "settings", label: "設定", kind: "group", icon: "gear", children: [
       { id: "account-settings", label: "帳戶設定", tabs: ["公司資訊", "預約發送代表號", "個人資料", "密碼"] },
@@ -718,6 +1116,108 @@
       { label: "多媒體簡訊單價（MMS）", value: "NT$3.5 / 則" },
       { label: "合約期間", value: "2026/01/01–2026/12/31" }
     ]
+  };
+
+  /* ============================================================
+     組織與子帳號模組資料（2026-08-11 新增）
+     ------------------------------------------------------------
+     角色模型：帳號歸屬 母/子，deptId=null 代表母帳號（企業管理員，全公司唯一）。
+     子帳號一定屬於某個部門，角色是 deptManager 或 user。
+     ============================================================ */
+  const ROLES = {
+    companyAdmin: { label: "企業管理員" },
+    deptManager: { label: "部門管理員" },
+    user: { label: "一般使用者" }
+  };
+  /* 2026-08-12：權限總覽頁整個拿掉了（Alvie 確認過的決定，不是誤會），這份資料現在只餵
+     帳號抽屜的「此身份可用功能」預覽。「公司層級設定」Alvie 不確定那是什麼，拿掉；
+     「權限總覽」項目也一併移除（頁面已不存在）。
+     Phase 2 規劃中的功能（帳單與帳務／訂閱方案／發票管理，對照 NAV 的 phase2 標記）維持不列。
+     access 只有 "all"（三身份皆可）跟 "admin"（僅企業/部門管理員）兩種。 */
+  const PERM_MATRIX = [
+    { category: "總覽", items: [
+      { label: "總覽", access: "all" }
+    ]},
+    { category: "訊息發送", items: [
+      { label: "簡訊發送", access: "all" },
+      { label: "參數簡訊發送", access: "all" },
+      { label: "預約簡訊維護", access: "all" }
+    ]},
+    { category: "訊息紀錄報表", items: [
+      { label: "發送查詢", access: "all" },
+      { label: "管理報表", access: "admin" }
+    ]},
+    { category: "帳務與點數", items: [
+      // 儲值：2026-08-11 Alvie 拍板三個角色都可以（舊系統沒有這個功能、無前例，是新架構才有的決定）。
+      // 下面兩項維持 admin —— 它們是「配點數給別人 / 看撥點紀錄」的管理動作，舊系統就放在
+      // 「額外開放」那組，跟「自己儲值」性質不同，這次的裁示沒有涵蓋到它們
+      { label: "儲值", access: "all" },
+      { label: "子帳號點數管理", access: "admin" },
+      { label: "撥點查詢", access: "admin" }
+    ]},
+    { category: "組織與子帳號", items: [
+      { label: "子帳號管理", access: "admin" },
+      { label: "部門", access: "admin" }
+    ]},
+    { category: "設定", items: [
+      // 2026-08-12：Alvie 確認三個角色都能用「設定」，從 admin 改回 all（原本推測公司層級設定
+      // 只有管理員能用，是我的延伸判斷，不是規格明講的）。「個人資料」「密碼」原本獨立列出是
+      // 因為當時「設定」是 admin-only、要跟這兩個 all 的個人層級分頁區隔開；現在三項都是 all，
+      // 拆開列反而是同一件事講三次，合併只留「設定」代表整個帳戶設定＋進階設定
+      { label: "設定", access: "all" }
+    ]}
+  ];
+  function allPermItems() {
+    return PERM_MATRIX.reduce(function (acc, g) { return acc.concat(g.items); }, []);
+  }
+  function featuresForRole(role) {
+    return allPermItems().filter(function (item) { return item.access === "all" || role !== "user"; }).map(function (item) { return item.label; });
+  }
+
+  const DEPARTMENTS = [
+    { id: "d1", name: "業務部", code: "SALES01", managerId: "a2" },
+    { id: "d2", name: "客服部", code: "CS01", managerId: "a6" },
+    { id: "d3", name: "技術部", code: "TECH01", managerId: "a10" },
+    { id: "d4", name: "行銷部", code: "MKT01", managerId: null },
+    // 2026-08-12：極端值測試資料——長部門名稱，底下掛一個帳號測欄位截斷
+    { id: "d5", name: "產品設計研發中心", code: "PDRC01", managerId: null },
+    // 刻意 0 帳號：測「某部門 0 帳號」的空狀態（左側部門樹點這個）
+    { id: "d6", name: "客戶成功與售後服務部", code: "CSAS01", managerId: null }
+  ];
+
+  // 母帳號（企業管理員，唯一）deptId 為 null；其餘為子帳號
+  const ACCOUNTS = [
+    { id: "a1", status: "active", name: "Emma", account: "emma", deptId: null, role: "companyAdmin", empNo: "E0001", countryIso: "TW", phone: "912345678", email: "emma@every8d.com", intlSms: true },
+    { id: "a2", status: "active", name: "Ben", account: "ben.chen", deptId: "d1", role: "deptManager", empNo: "E0002", countryIso: "TW", phone: "922000111", email: "ben.chen@every8d.com", intlSms: false },
+    { id: "a3", status: "active", name: "Cindy", account: "cindy.lin", deptId: "d1", role: "user", empNo: "E0003", countryIso: "TW", phone: "933112233", email: "cindy.lin@every8d.com", intlSms: false },
+    { id: "a4", status: "active", name: "David", account: "david.wu", deptId: "d1", role: "user", empNo: "E0004", countryIso: "TW", phone: "955223344", email: "david.wu@every8d.com", intlSms: false },
+    { id: "a5", status: "disabled", name: "Ivy", account: "ivy.tsai", deptId: "d1", role: "user", empNo: "E0005", countryIso: "TW", phone: "966334455", email: "ivy.tsai@every8d.com", intlSms: false },
+    { id: "a6", status: "active", name: "Frank", account: "frank.hsu", deptId: "d2", role: "deptManager", empNo: "E0006", countryIso: "TW", phone: "977445566", email: "frank.hsu@every8d.com", intlSms: false },
+    { id: "a7", status: "active", name: "Grace", account: "grace.yang", deptId: "d2", role: "user", empNo: "E0007", countryIso: "TW", phone: "988556677", email: "grace.yang@every8d.com", intlSms: false },
+    { id: "a8", status: "active", name: "Henry", account: "henry.kuo", deptId: "d2", role: "user", empNo: "E0008", countryIso: "TW", phone: "912667788", email: "henry.kuo@every8d.com", intlSms: false },
+    { id: "a9", status: "disabled", name: "Jenny", account: "jenny.liu", deptId: "d2", role: "user", empNo: "E0009", countryIso: "TW", phone: "923778899", email: "jenny.liu@every8d.com", intlSms: false },
+    { id: "a10", status: "active", name: "Kevin", account: "kevin.chang", deptId: "d3", role: "deptManager", empNo: "E0010", countryIso: "TW", phone: "934889900", email: "kevin.chang@every8d.com", intlSms: true },
+    { id: "a11", status: "active", name: "Linda", account: "linda.huang", deptId: "d3", role: "user", empNo: "E0011", countryIso: "TW", phone: "945990011", email: "linda.huang@every8d.com", intlSms: false },
+    { id: "a12", status: "active", name: "Mars", account: "mars.tsao", deptId: "d3", role: "user", empNo: "E0012", countryIso: "US", phone: "2025550142", email: "mars.tsao@every8d.com", intlSms: true },
+    { id: "a13", status: "active", name: "Nina", account: "nina.wang", deptId: "d3", role: "user", empNo: "E0013", countryIso: "TW", phone: "956001122", email: "nina.wang@every8d.com", intlSms: false },
+    { id: "a14", status: "active", name: "Oscar", account: "oscar.lee", deptId: "d4", role: "user", empNo: "E0014", countryIso: "TW", phone: "967112233", email: "oscar.lee@every8d.com", intlSms: false },
+    { id: "a15", status: "disabled", name: "Peggy", account: "peggy.chou", deptId: "d4", role: "user", empNo: "E0015", countryIso: "TW", phone: "978223344", email: "peggy.chou@every8d.com", intlSms: false },
+    { id: "a16", status: "active", name: "Roy", account: "roy.fang", deptId: "d4", role: "user", empNo: "E0016", countryIso: "JP", phone: "9012345678", email: "roy.fang@every8d.com", intlSms: true },
+    // 2026-08-12：極端值測試——姓名/帳號/E-mail/員編都刻意拉長，門號用中東（+971）測不同國碼長度，
+    // 跟已存在的 Mars(+1 美國)、Roy(+81 日本) 湊齊三種長度不同的門號情境
+    { id: "a17", status: "active", name: "Alexander Wang-Chen", account: "christopher.anderson", deptId: "d5", role: "user",
+      empNo: "TECH-2024-0012", countryIso: "AE", phone: "501234567", email: "christopher.anderson@subsidiary.every8d-global.com", intlSms: true }
+  ];
+  let nextAccountSeq = 18;
+
+  // demo 用「以哪個身份登入」——純原型工具，不是真實帳號模型的一部分（見下方 demo-role-bar 區塊）
+  // deptManager 示範固定站在 d1（業務部）的視角
+  const DEMO_DEPT_FOR_MANAGER = "d1";
+
+  // 帳號頁篩選/抽屜/確認框共用的 UI 狀態（跟 NAV 導覽的 state 分開，避免混在一起）
+  const orgState = {
+    search: "", deptFilter: "all", roleFilter: "all", statusFilter: "all", editingId: null, pendingConfirm: null,
+    bulkMode: false, selectedIds: new Set()
   };
 
   // ---- 儀表板圖表：手刻 SVG（零外部依賴），色彩已用 dataviz skill 的驗證腳本跑過 CVD 檢查 ----
@@ -1018,10 +1518,37 @@
     renderBar(true);   // 只有首次載入要跑進場動畫（目前長條圖沒有會重建它的互動，先備著跟趨勢圖同一套規則）
   }
 
-  const state = { activeTop: "overview", activeChildId: null, activeTabIndex: 0, expandedGroup: null };
+  const state = { activeTop: "overview", activeChildId: null, activeTabIndex: 0, expandedGroup: null, demoRole: "companyAdmin" };
 
   function findChild(group, childId) {
     return (group.children || []).find(function (c) { return c.id === childId; });
+  }
+
+  // demo 身份切換會影響哪些側欄項目看得到：一般使用者看不到 PERM_MATRIX 標記 admin 的項目
+  // 2026-08-12：原本只特別處理「組織與子帳號」整個群組，但「管理報表」／「子帳號點數管理」／
+  // 「撥點查詢」這三個子項目也是 access:"admin"，卻沒有被過濾——側欄跟帳號抽屜的「此身份可用
+  // 功能」預覽兩處對不上。改成統一吃 PERM_MATRIX（用 label 對照），子項目過濾掉之後，
+  // 若一個群組底下已經沒有可見子項目就把整個群組藏起來（「組織與子帳號」不用再特別寫一次）。
+  function itemAccess(label) {
+    for (let i = 0; i < PERM_MATRIX.length; i++) {
+      const items = PERM_MATRIX[i].items;
+      for (let j = 0; j < items.length; j++) {
+        if (items[j].label === label) return items[j].access;
+      }
+    }
+    return "all"; // PERM_MATRIX 沒定義的項目（如設定頁底下的分頁）維持現況全開，不在這次範圍內
+  }
+  function isChildVisible(child) {
+    return itemAccess(child.label) !== "admin" || state.demoRole !== "user";
+  }
+  function visibleChildren(group) {
+    return (group.children || []).filter(isChildVisible);
+  }
+  function visibleNav() {
+    return NAV.filter(function (item) {
+      if (item.kind !== "group") return true;
+      return visibleChildren(item).length > 0;
+    });
   }
 
   function render() {
@@ -1034,7 +1561,7 @@
   function buildSidebar() {
     const scroll = document.getElementById("navScroll");
     let html = "";
-    NAV.forEach(function (item) {
+    visibleNav().forEach(function (item) {
       if (item.kind === "group") {
         html += '<button class="nav-row" data-group="' + item.id + '" aria-expanded="false">' +
           icon(item.icon) + '<span class="label">' + item.label + '</span>' + icon("chevDown", 'class="ico chev"') +
@@ -1042,7 +1569,7 @@
         // 子選單一律輸出，收合時靠 .nav-group-wrap 的 height:0 藏起來
         html += '<div class="nav-group-wrap" data-wrap="' + item.id + '">';
         html += '<div class="nav-group-children">';
-        item.children.forEach(function (child) {
+        visibleChildren(item).forEach(function (child) {
           html += '<button class="nav-child" data-group="' + item.id + '" data-child="' + child.id + '">' +
             '<span class="label">' + child.label + '</span>' +
             (child.phase2 ? '<span class="p2-badge">P2</span>' : '') +
@@ -1068,8 +1595,10 @@
         if (state.expandedGroup === gid) {
           state.activeTop = gid;
           const group = NAV.find(function (n) { return n.id === gid; });
-          if (!state.activeChildId || !findChild(group, state.activeChildId)) {
-            state.activeChildId = group.children[0].id;
+          const kids = visibleChildren(group);
+          const stillValid = state.activeChildId && kids.some(function (c) { return c.id === state.activeChildId; });
+          if (!stillValid) {
+            state.activeChildId = kids[0].id;
             state.activeTabIndex = 0;
           }
         }
@@ -1176,6 +1705,13 @@
     // group -> child
     const child = findChild(topItem, state.activeChildId) || topItem.children[0];
 
+    // 組織與子帳號整個群組走專用渲染器（樹狀/篩選/表格/抽屜），不吃下面通用的 tabs/placeholder 邏輯
+    if (topItem.id === "org") {
+      content.innerHTML = protoNote + renderOrgHTML(child.id);
+      wireOrgPage(child.id);
+      return;
+    }
+
     let html = protoNote + '<div class="page-head"><h1>' + child.label +
       (child.phase2 ? '<span class="p2-badge" style="margin-left:8px;vertical-align:middle;">Phase 2</span>' : '') + '</h1></div>';
 
@@ -1209,6 +1745,956 @@
     });
   }
 
+  /* ============================================================
+     組織與子帳號模組（2026-08-11 新增，UX 重設版 v3）
+     ------------------------------------------------------------
+     不沿用舊後台「勾選列+上方按鈕」慣例，改成：即時篩選、每列自帶操作、
+     右側抽屜（Drawer）建立/編輯、demo 身份切換連動可見範圍。
+     Drawer／Toggle／組織樹／⋯拿掉改文字連結——這些是系統目前沒有的元件，
+     照既有 token 語言（surface/radius-xl/shadow-card 等）自己設計，
+     之後要不要收進 Figma 由 Alvie 決定。
+     ============================================================ */
+
+  function escAttr(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
+
+  /* ============================================================
+     全站共用 tooltip 引擎（2026-08-12，第二輪加延遲）：任何元素只要帶 data-tip="..."
+     hover 就會跳出提示——表格截斷欄位（姓名/帳號/部門/E-mail）、頂部圖示按鈕
+     （公告/常見問題/API文件）都吃同一套，不是分開兩套邏輯。單一 fixed 節點掛在 body
+     底下（跟 dropdown 的 portal 同一種做法，不會被卡片的 overflow:hidden 裁切），
+     監聽直接掛在 document 上（涵蓋 #content 之外的頂部列，子節點重繪也不用重新綁）。
+     2026-08-12：Alvie 反映「API 文件下載」那類圖示原本用瀏覽器原生 title屬性，
+     跳出延遲是瀏覽器內建、沒辦法調——這是這輪把它們也改吃這套引擎的原因，
+     原生 title 完全沒有可控的顯示延遲。300–400ms 抓中間值 350ms：太短滑過去就閃現，
+     太長會覺得卡頓；移開時不等待、立刻觸發淡出（CSS transition 本身 120ms，已經夠快）
+     ============================================================ */
+  const CELL_TIP_DELAY = 350;
+  let cellTipEl = null;
+  let cellTipShowTimer = null;
+  function ensureCellTip() {
+    if (!cellTipEl) {
+      cellTipEl = document.createElement("div");
+      cellTipEl.className = "cell-tip";
+      document.body.appendChild(cellTipEl);
+    }
+    return cellTipEl;
+  }
+  function positionCellTip(target) {
+    const tip = ensureCellTip();
+    const r = target.getBoundingClientRect();
+    const tr = tip.getBoundingClientRect();
+    let top = r.top - tr.height - 8;
+    if (top < 8) top = r.bottom + 8; // 上方空間不夠就往下開
+    let left = r.left + r.width / 2 - tr.width / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - tr.width - 8));
+    tip.style.top = top + "px";
+    tip.style.left = left + "px";
+  }
+  function showCellTip(target) {
+    const text = target.getAttribute("data-tip");
+    if (!text) return;
+    const tip = ensureCellTip();
+    tip.textContent = text;
+    tip.classList.add("open");
+    positionCellTip(target);
+  }
+  function hideCellTip() {
+    clearTimeout(cellTipShowTimer);
+    if (cellTipEl) cellTipEl.classList.remove("open");
+  }
+  document.addEventListener("mouseover", function (e) {
+    const t = e.target.closest("[data-tip]");
+    if (!t) return;
+    clearTimeout(cellTipShowTimer);
+    cellTipShowTimer = setTimeout(function () { showCellTip(t); }, CELL_TIP_DELAY);
+  });
+  document.addEventListener("mouseout", function (e) {
+    const t = e.target.closest("[data-tip]");
+    if (t && !t.contains(e.relatedTarget)) hideCellTip();
+  });
+  window.addEventListener("scroll", function () { hideCellTip(); }, true);
+
+  /* ============================================================
+     自訂 Dropdown 引擎（2026-08-11 第三輪，取代原生 <select>）
+     ------------------------------------------------------------
+     一個共用註冊表 ddRegistry（id → {options, value, onChange, disabled}）＋
+     一個掛在 document.body 的 portal，面板一律 fixed 定位、開啟時當場量觸發按鈕的
+     getBoundingClientRect() 算座標，捲動／resize 時即時重算（不是關掉，是真的跟著移動）。
+     面板獨立掛在 body 下，不受 .drawer-body 的 overflow:hidden 或 .drawer 的
+     transform 影響——這是先前「面板位置跑掉」的根本原因（每個下拉各自 relative 定位，
+     一旦外層有 overflow/transform 就被裁切或位移），改成 portal 之後全站下拉共用同一套邏輯，
+     不用每個下拉各補位移。
+     ============================================================ */
+  const ddRegistry = {};
+  let ddActive = null; // { id, triggerEl, panelEl }
+
+  function ddPortal() {
+    let el = document.getElementById("ddPortal");
+    if (!el) { el = document.createElement("div"); el.id = "ddPortal"; document.body.appendChild(el); }
+    return el;
+  }
+  // 產生觸發按鈕的 HTML，並把這個下拉的選項/當前值/onChange 登記進 ddRegistry
+  function renderDropdown(id, options, value, opts) {
+    opts = opts || {};
+    ddRegistry[id] = { options: options, value: value, disabled: !!opts.disabled, onChange: opts.onChange || null };
+    const selected = options.find(function (o) { return o.value === value; });
+    const label = selected ? selected.label : (opts.placeholder || "");
+    return '<div class="dd' + (opts.className ? " " + opts.className : "") + '">' +
+      '<button type="button" class="dd-trigger" id="dd-' + id + '" data-dd="' + id + '"' + (opts.disabled ? " disabled" : "") + ' aria-haspopup="listbox" aria-expanded="false">' +
+      '<span class="dd-label">' + escAttr(label) + '</span>' + icon("chevDown", 'class="ico dd-chev"') +
+      '</button></div>';
+  }
+  // 每次把 renderDropdown() 的 HTML 塞進 DOM 之後，呼叫這個把 click 事件接上（HTML 是新的節點，要重新綁）
+  function ddBind(id) {
+    const trigger = document.getElementById("dd-" + id);
+    if (!trigger) return;
+    trigger.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (ddActive && ddActive.id === id) { ddClose(); return; }
+      ddOpen(trigger);
+    });
+  }
+  function ddPanelHtml(id) {
+    const state = ddRegistry[id];
+    return '<div class="dd-panel" id="ddpanel-' + id + '" role="listbox">' + state.options.map(function (o) {
+      const isSelected = o.value === state.value;
+      return '<button type="button" class="dd-item" data-value="' + escAttr(o.value) + '">' +
+        (isSelected ? icon("check", 'class="ico dd-check"') : "") + '<span>' + escAttr(o.label) + '</span></button>';
+    }).join("") + '</div>';
+  }
+  function ddOpen(triggerEl) {
+    const id = triggerEl.getAttribute("data-dd");
+    const state = ddRegistry[id];
+    if (!state || state.disabled) return;
+    ddClose();
+    ddPortal().innerHTML = ddPanelHtml(id);
+    const panel = document.getElementById("ddpanel-" + id);
+    triggerEl.setAttribute("aria-expanded", "true");
+    triggerEl.classList.add("is-open");
+    ddActive = { id: id, triggerEl: triggerEl, panelEl: panel };
+    positionDdPanel(triggerEl, panel);
+    requestAnimationFrame(function () { panel.classList.add("open"); });
+    panel.querySelectorAll(".dd-item").forEach(function (item) {
+      item.addEventListener("click", function () {
+        ddSetValue(id, item.getAttribute("data-value"));
+        ddClose();
+      });
+    });
+  }
+  function ddClose() {
+    if (!ddActive) return;
+    ddActive.triggerEl.setAttribute("aria-expanded", "false");
+    ddActive.triggerEl.classList.remove("is-open");
+    if (ddActive.panelEl.parentNode) ddActive.panelEl.parentNode.removeChild(ddActive.panelEl);
+    ddActive = null;
+  }
+  function positionDdPanel(trigger, panel) {
+    const rect = trigger.getBoundingClientRect();
+    panel.style.width = rect.width + "px";
+    panel.style.left = rect.left + "px";
+    const panelHeight = panel.offsetHeight;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < panelHeight + 8 && rect.top > panelHeight + 8;
+    panel.style.top = (openUp ? (rect.top - panelHeight - 4) : (rect.bottom + 4)) + "px";
+  }
+  function ddValue(id) { return ddRegistry[id] ? ddRegistry[id].value : undefined; }
+  function ddSetValue(id, value, opts) {
+    opts = opts || {};
+    const state = ddRegistry[id];
+    if (!state) return;
+    state.value = value;
+    const trigger = document.getElementById("dd-" + id);
+    if (trigger) {
+      const selected = state.options.find(function (o) { return o.value === value; });
+      trigger.querySelector(".dd-label").textContent = selected ? selected.label : "";
+    }
+    if (!opts.silent && state.onChange) state.onChange(value);
+  }
+  // 觸發按鈕本身沒重繪、只是選項清單變了（例如身份切換後部門選項變少）時用這個，不會誤觸發 onChange
+  function ddSetOptions(id, options, value) {
+    const state = ddRegistry[id];
+    if (!state) return;
+    state.options = options;
+    ddSetValue(id, value !== undefined ? value : state.value, { silent: true });
+  }
+  document.addEventListener("click", function (e) {
+    if (!ddActive) return;
+    if (ddActive.panelEl.contains(e.target) || ddActive.triggerEl.contains(e.target)) return;
+    ddClose();
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && ddActive) ddClose(); });
+  window.addEventListener("scroll", function () { if (ddActive) positionDdPanel(ddActive.triggerEl, ddActive.panelEl); }, true);
+  window.addEventListener("resize", function () { if (ddActive) positionDdPanel(ddActive.triggerEl, ddActive.panelEl); });
+
+  function dialFor(iso) {
+    const c = COUNTRY_CODES.find(function (c) { return c.iso === iso; });
+    return c ? c.dial : "";
+  }
+  function dialDisplay(iso) {
+    return "+" + dialFor(iso);
+  }
+  function field(key, label, required, inputHtml) {
+    return '<div class="field-group" data-field="' + key + '"><label>' + label +
+      (required ? '<span class="req">*</span>' : '') + '</label>' + inputHtml +
+      '<div class="err-msg" id="err-' + key + '" style="display:none"></div></div>';
+  }
+  function toggleHtml(id, checked) {
+    return '<label class="toggle"><input type="checkbox" id="' + id + '"' + (checked ? " checked" : "") +
+      '><span class="track"></span><span class="thumb"></span></label>';
+  }
+  // attrs 直接塞進 <input>（class/id/data-*），沿用 Figma Checkbox 元件規格，取代原生 checkbox 外觀
+  function checkboxHtml(attrs, checked) {
+    return '<label class="chk"><input type="checkbox"' + attrs + (checked ? " checked" : "") + '><span class="chk-box">' +
+      icon("check", 'class="ico ico-check"') + icon("minus", 'class="ico ico-minus"') + '</span></label>';
+  }
+  function setFieldError(key, msg) {
+    const scope = document.querySelector('[data-field="' + key + '"]');
+    if (scope) {
+      // 2026-08-12：優先找 #f+Key 這個精確 id（大多數欄位的輸入框都照這個命名）。
+      // 「手機」這個 field-group 裡同時有國碼下拉（.dd-trigger）跟門號 input 兩個可互動元素，
+      // 沒有這條的話 querySelector("input, select, .dd-trigger") 會選到排在前面的國碼下拉，
+      // 手機號碼沒填的錯誤會誤標在國碼欄位上。找不到精確 id 的欄位（部門/角色這類純下拉、
+      // 或部門表單的 deptName/deptCode）維持原本的通用 fallback，不受影響
+      const exactId = "f" + key.charAt(0).toUpperCase() + key.slice(1);
+      const input = scope.querySelector("#" + exactId) || scope.querySelector("input, select, .dd-trigger");
+      if (input) input.classList.add("is-error");
+    }
+    const err = document.getElementById("err-" + key);
+    if (err) { err.textContent = msg; err.style.display = "flex"; }
+  }
+  // 跟 setFieldError 相同的定位邏輯，反過來清單一欄位——即時輸入驗證（如帳號格式）
+  // 用這個而不是 clearFieldErrors()，才不會把使用者還沒修正的其他欄位錯誤一起清掉
+  function clearFieldError(key) {
+    const scope = document.querySelector('[data-field="' + key + '"]');
+    if (scope) {
+      const exactId = "f" + key.charAt(0).toUpperCase() + key.slice(1);
+      const input = scope.querySelector("#" + exactId) || scope.querySelector("input, select, .dd-trigger");
+      if (input) input.classList.remove("is-error");
+    }
+    const err = document.getElementById("err-" + key);
+    if (err) { err.style.display = "none"; err.textContent = ""; }
+  }
+  function clearFieldErrors() {
+    document.querySelectorAll(".field-group input.is-error, .field-group select.is-error, .field-group .dd-trigger.is-error").forEach(function (el) { el.classList.remove("is-error"); });
+    document.querySelectorAll(".err-msg").forEach(function (el) { el.style.display = "none"; el.textContent = ""; });
+  }
+
+  // ---- 可見範圍（依 demo 身份） ----
+  function scopeDeptIds() {
+    if (state.demoRole === "companyAdmin") return DEPARTMENTS.map(function (d) { return d.id; });
+    if (state.demoRole === "deptManager") return [DEMO_DEPT_FOR_MANAGER];
+    return [];
+  }
+  function scopedAccounts() {
+    const deptIds = scopeDeptIds();
+    return ACCOUNTS.filter(function (a) {
+      if (a.deptId === null) return state.demoRole === "companyAdmin"; // 母帳號只有企業管理員自己看得到
+      return deptIds.indexOf(a.deptId) !== -1;
+    });
+  }
+  function filteredAccounts() {
+    let list = scopedAccounts();
+    if (orgState.deptFilter !== "all") list = list.filter(function (a) { return a.deptId === orgState.deptFilter; });
+    if (orgState.roleFilter !== "all") list = list.filter(function (a) { return a.role === orgState.roleFilter; });
+    if (orgState.statusFilter !== "all") list = list.filter(function (a) { return a.status === orgState.statusFilter; });
+    const q = orgState.search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(function (a) {
+        return a.name.toLowerCase().indexOf(q) !== -1 || a.account.toLowerCase().indexOf(q) !== -1 || a.email.toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    return list;
+  }
+  // 依當前登入者身份，決定新增/編輯帳號時可以選哪些角色（見規格「可見範圍」表）
+  function allowedRoleOptions() {
+    if (state.demoRole === "companyAdmin") return ["deptManager", "user"];
+    if (state.demoRole === "deptManager") return ["user", "deptManager"];
+    return [];
+  }
+
+  // ---- 頂層分流 ----
+  function renderOrgHTML(childId) {
+    if (childId === "org-departments") return renderDepartmentsPage();
+    return renderAccountsPage();
+  }
+  function wireOrgPage(childId) {
+    if (childId === "org-departments") { wireDepartmentsPage(); return; }
+    wireAccountsPage();
+  }
+
+  // ============================================================
+  // 一、帳號（主頁）
+  // ============================================================
+  function renderOrgTree() {
+    let html = '<div class="org-tree">';
+    html += '<div class="org-tree-company">' + icon("org", 'style="width:15px;height:15px"') + 'EVERY8D 股份有限公司</div>';
+    const allCount = ACCOUNTS.filter(function (a) { return a.deptId !== null; }).length;
+    html += '<button class="org-tree-item' + (orgState.deptFilter === "all" ? " active" : "") + '" data-tree="all">全部帳號<span class="cnt">' + allCount + '</span></button>';
+    DEPARTMENTS.forEach(function (d) {
+      const cnt = ACCOUNTS.filter(function (a) { return a.deptId === d.id; }).length;
+      html += '<button class="org-tree-item' + (orgState.deptFilter === d.id ? " active" : "") + '" data-tree="' + d.id + '">' + d.name + '<span class="cnt">' + cnt + '</span></button>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderFilterBar() {
+    const isAdmin = state.demoRole === "companyAdmin";
+    let html = '<div class="filter-bar">';
+    html += '<div class="filter-search">' + icon("search") + '<input type="text" id="acctSearch" placeholder="搜尋姓名／帳號／E-mail" value="' + escAttr(orgState.search) + '"></div>';
+    if (isAdmin) {
+      const deptOptions = [{ value: "all", label: "所有部門" }].concat(DEPARTMENTS.map(function (d) { return { value: d.id, label: d.name }; }));
+      html += renderDropdown("acctDeptFilter", deptOptions, orgState.deptFilter, {
+        onChange: function (v) { orgState.deptFilter = v; syncOrgTreeActive(); refreshAccountsScope(); }
+      });
+    }
+    const roleOptions = [{ value: "all", label: "所有角色" }, { value: "deptManager", label: "部門管理員" }, { value: "user", label: "一般使用者" }];
+    html += renderDropdown("acctRoleFilter", roleOptions, orgState.roleFilter, {
+      onChange: function (v) { orgState.roleFilter = v; refreshAccountsList(); }
+    });
+    const statusOptions = [{ value: "all", label: "所有狀態" }, { value: "active", label: "啟用" }, { value: "disabled", label: "停用" }];
+    html += renderDropdown("acctStatusFilter", statusOptions, orgState.statusFilter, {
+      onChange: function (v) { orgState.statusFilter = v; refreshAccountsList(); }
+    });
+    html += '<div class="filter-bar-spacer"></div>';
+    if (!orgState.bulkMode) html += '<button class="btn btn-secondary" id="btnBulkToggle">批次操作</button>';
+    html += '<button class="btn btn-primary" id="btnNewAccount">' + icon("plus") + '新增帳號</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderBulkBar() {
+    if (!orgState.bulkMode) return "";
+    const n = orgState.selectedIds.size;
+    return '<div class="bulk-bar"><span class="bb-count">已選 ' + n + ' 筆</span>' +
+      '<div class="bulk-bar-spacer"></div>' +
+      '<button class="btn btn-secondary btn-sm" id="btnBulkDisable"' + (n === 0 ? " disabled" : "") + '>批次停用</button>' +
+      '<button class="btn btn-secondary btn-sm" id="btnBulkEnable"' + (n === 0 ? " disabled" : "") + '>批次啟用</button>' +
+      '<button class="btn-text" id="btnBulkCancel">取消</button>' +
+      '</div>';
+  }
+
+  // 三種空狀態分開判斷，文案/CTA 都不一樣（2026-08-12）：
+  // ① 這個身份看得到的範圍裡完全沒帳號（全新公司／被清空）② 單純點了一個 0 帳號的部門
+  // （沒有另外打字搜尋或選角色/狀態）③ 真的有下條件（搜尋/角色/狀態）但篩不出東西
+  function renderAccountsList() {
+    const list = filteredAccounts();
+    if (list.length === 0) {
+      const totalInScope = scopedAccounts().length;
+      const hasSearchOrOtherFilter = orgState.search.trim() !== "" || orgState.roleFilter !== "all" || orgState.statusFilter !== "all";
+      const deptOnlySelected = orgState.deptFilter !== "all" && !hasSearchOrOtherFilter;
+
+      if (totalInScope === 0) {
+        return '<div class="table-card"><div class="empty-state">' + icon("users") +
+          '<p>還沒有任何子帳號，建立第一個子帳號開始管理</p>' +
+          '<button class="btn btn-primary" id="btnNewAccountEmpty">' + icon("plus") + '新增帳號</button>' +
+          '</div></div>';
+      }
+      if (deptOnlySelected) {
+        const deptName = DEPARTMENTS.find(function (d) { return d.id === orgState.deptFilter; }).name;
+        return '<div class="table-card"><div class="empty-state">' + icon("users") +
+          '<p>「' + escAttr(deptName) + '」目前還沒有帳號</p>' +
+          '<button class="btn btn-primary" id="btnNewAccountEmpty">' + icon("plus") + '新增帳號</button>' +
+          '</div></div>';
+      }
+      return '<div class="table-card"><div class="empty-state">' + icon("search") +
+        '<p>找不到符合條件的帳號</p>' +
+        '<button class="btn btn-secondary" id="btnClearFilters">清除篩選</button>' +
+        '</div></div>';
+    }
+    const bulkMode = orgState.bulkMode;
+    const rows = list.map(function (a) {
+      const dept = a.deptId ? DEPARTMENTS.find(function (d) { return d.id === a.deptId; }).name : "—（總公司）";
+      const statusBadge = a.status === "active"
+        ? '<span class="badge-dot is-active"><span class="dot"></span>啟用</span>'
+        : '<span class="badge-dot is-disabled"><span class="dot"></span>停用</span>';
+      const manageable = a.role !== "companyAdmin";
+      let actions = '<button class="btn-text" data-edit="' + a.id + '">編輯</button>';
+      if (manageable) actions += '<button class="btn-danger-text" data-delete="' + a.id + '">刪除</button>';
+      const checkCell = bulkMode
+        ? '<td class="col-check">' + (manageable ? checkboxHtml(' class="rowChk" data-id="' + a.id + '"', orgState.selectedIds.has(a.id)) : "") + '</td>'
+        : "";
+      // 姓名／帳號／所屬部門／E-mail 是長度不固定的欄位，內容超出欄寬時往下換行、完整顯示
+      // （不截斷、不掛 tooltip——帳號管理要一眼看到完整資料）；員工編號／手機走 .num-cell，
+      // 固定不換行、給足欄寬（見表頭 width）
+      return '<tr>' + checkCell +
+        '<td>' + statusBadge + '</td>' +
+        '<td class="name-cell wrap-cell">' + escAttr(a.name) + '</td>' +
+        '<td class="muted wrap-cell">' + escAttr(a.account) + '</td>' +
+        '<td class="wrap-cell">' + escAttr(dept) + '</td>' +
+        '<td>' + ROLES[a.role].label + '</td>' +
+        '<td class="muted num-cell">' + (a.empNo || "—") + '</td>' +
+        '<td class="muted num-cell">' + dialDisplay(a.countryIso) + " " + a.phone + '</td>' +
+        '<td class="muted wrap-cell">' + escAttr(a.email) + '</td>' +
+        '<td class="col-actions"><div class="row-actions">' + actions + '</div></td>' +
+        '</tr>';
+    }).join("");
+    // 2026-08-12 第三版：欄寬全部改成「百分比」而不是固定 px。上一版用 px 寫死每欄寬度，
+    // 加總（~1150px）常常超過容器實際寬度（側欄+部門樹吃掉不少空間），table-layout:fixed
+    // 底下 px 欄寬是「最小需求」不是「上限」，容器裝不下時表格會被撐寬到超出去，這才是
+    // 上一輪表格還在橫向捲動、操作欄被切掉的根本原因。百分比欄寬 + 表格 width:100%，
+    // 欄寬永遠等於「容器寬度 × 各欄比例」，加總精確等於容器寬度，數學上不可能超出去，
+    // 不需要再靠橫向捲動或 sticky 補救。批次模式多一欄 checkbox，比例要重新分配過，
+    // 不能直接在原本 100% 之外加一欄（那樣一樣會超出 100%），所以兩組比例分開算
+    const W = bulkMode
+      ? { check: 4, status: 6.7, name: 9, account: 10.5, dept: 9.5, role: 8.5, empNo: 12.5, phone: 13.5, email: 12.5, actions: 12.5 }
+      : { status: 7, name: 9.5, account: 11, dept: 10, role: 9, empNo: 13, phone: 14, email: 13.5, actions: 13 };
+    const checkHeadCell = bulkMode ? '<th class="col-check" style="width:' + W.check + '%">' + checkboxHtml(' id="selectAllChk"', false) + '</th>' : "";
+    return '<div class="table-card"><div class="table-scroll"><table class="data-table is-interactive acct-table"><thead><tr>' + checkHeadCell +
+      '<th style="width:' + W.status + '%">帳號狀態</th><th style="width:' + W.name + '%">姓名</th><th style="width:' + W.account + '%">帳號</th>' +
+      '<th style="width:' + W.dept + '%">所屬部門</th><th style="width:' + W.role + '%">角色</th><th style="width:' + W.empNo + '%">員工編號</th>' +
+      '<th style="width:' + W.phone + '%">手機</th><th style="width:' + W.email + '%">E-mail</th><th class="col-actions" style="width:' + W.actions + '%">操作</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  }
+
+  // 2026-08-11 第四輪：部門管理員原本看到的是一整條橘色警示 banner（「目前身份僅能管理…」），
+  // Alvie 覺得太重，改成跟企業管理員點部門樹時同一種輕量小字（icon+部門名稱+主管），
+  // 兩處共用同一個 renderer，不同身份看到的資訊呈現方式統一
+  function renderDeptContextLine(deptId) {
+    const dept = DEPARTMENTS.find(function (d) { return d.id === deptId; });
+    if (!dept) return "";
+    const manager = dept.managerId ? ACCOUNTS.find(function (a) { return a.id === dept.managerId; }) : null;
+    return '<div class="dept-context">' + icon("users") + dept.name + ' · 主管：' + (manager ? manager.name : "未指派") + '</div>';
+  }
+  function renderDeptContext() {
+    if (orgState.deptFilter === "all") return "";
+    return renderDeptContextLine(orgState.deptFilter);
+  }
+
+  function renderAccountsPage() {
+    const isAdmin = state.demoRole === "companyAdmin";
+    let html = '<div class="page-head"><h1>子帳號管理</h1></div>';
+    html += '<div class="page-sub">管理公司底下所有子帳號，建立、停用、指派部門與角色</div>';
+    html += '<div class="org-shell">';
+    if (isAdmin) html += renderOrgTree();
+    html += '<div class="org-main">';
+    if (!isAdmin) html += renderDeptContextLine(DEMO_DEPT_FOR_MANAGER);
+    if (isAdmin) html += '<div id="deptContextWrap">' + renderDeptContext() + '</div>';
+    html += renderFilterBar();
+    html += '<div id="bulkBarWrap">' + renderBulkBar() + '</div>';
+    html += '<div id="orgAccountsListWrap">' + renderAccountsList() + '</div>';
+    html += '</div></div>';
+    return html;
+  }
+
+  function syncOrgTreeActive() {
+    document.querySelectorAll("[data-tree]").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-tree") === orgState.deptFilter);
+    });
+  }
+  // 部門樹／部門篩選 → 除了重畫列表，還要重畫「部門情境列」（部門名稱＋主管）
+  function refreshAccountsScope() {
+    const ctxWrap = document.getElementById("deptContextWrap");
+    if (ctxWrap) ctxWrap.innerHTML = renderDeptContext();
+    refreshAccountsList();
+  }
+  function refreshAccountsList() {
+    const wrap = document.getElementById("orgAccountsListWrap");
+    if (!wrap) return;
+    wrap.innerHTML = renderAccountsList();
+    bindListRowActions();
+  }
+  function bindListRowActions() {
+    document.querySelectorAll("[data-edit]").forEach(function (btn) {
+      btn.addEventListener("click", function () { openAccountDrawer(btn.getAttribute("data-edit")); });
+    });
+    document.querySelectorAll("[data-delete]").forEach(function (btn) {
+      btn.addEventListener("click", function () { openConfirm(btn.getAttribute("data-delete"), "account"); });
+    });
+    document.querySelectorAll("#btnNewAccountEmpty").forEach(function (btn) {
+      btn.addEventListener("click", function () { openAccountDrawer(null); });
+    });
+    document.querySelectorAll("#btnClearFilters").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        orgState.search = ""; orgState.deptFilter = "all"; orgState.roleFilter = "all"; orgState.statusFilter = "all";
+        const searchEl = document.getElementById("acctSearch");
+        if (searchEl) searchEl.value = "";
+        syncOrgTreeActive();
+        ddSetValue("acctDeptFilter", "all", { silent: true });
+        ddSetValue("acctRoleFilter", "all", { silent: true });
+        ddSetValue("acctStatusFilter", "all", { silent: true });
+        refreshAccountsScope();
+      });
+    });
+    if (orgState.bulkMode) {
+      document.querySelectorAll(".rowChk").forEach(function (cb) {
+        cb.addEventListener("change", function () {
+          if (this.checked) orgState.selectedIds.add(this.getAttribute("data-id"));
+          else orgState.selectedIds.delete(this.getAttribute("data-id"));
+          syncSelectAllChk();
+          syncBulkBar();
+        });
+      });
+      const selAll = document.getElementById("selectAllChk");
+      if (selAll) {
+        syncSelectAllChk();
+        // 主流全選邏輯（Gmail 那種）：只要目前「有任何已選」（不管全選還是部分選取），
+        // 點下去都是清空；只有完全沒選時點下去才是全選。用 click+preventDefault 自己控制
+        // checked/indeterminate，不能信任瀏覽器對 indeterminate checkbox 的原生點擊行為
+        // ——原生行為是「indeterminate 點一下變全選」，跟這裡要的邏輯相反
+        selAll.addEventListener("click", function (e) {
+          e.preventDefault();
+          const ids = filteredAccounts().filter(function (a) { return a.role !== "companyAdmin"; }).map(function (a) { return a.id; });
+          const anySelected = ids.some(function (id) { return orgState.selectedIds.has(id); });
+          if (anySelected) ids.forEach(function (id) { orgState.selectedIds.delete(id); });
+          else ids.forEach(function (id) { orgState.selectedIds.add(id); });
+          refreshAccountsList();
+          syncBulkBar();
+        });
+      }
+    }
+  }
+  function syncSelectAllChk() {
+    const selAll = document.getElementById("selectAllChk");
+    if (!selAll) return;
+    const ids = filteredAccounts().filter(function (a) { return a.role !== "companyAdmin"; }).map(function (a) { return a.id; });
+    const selectedCount = ids.filter(function (id) { return orgState.selectedIds.has(id); }).length;
+    selAll.checked = ids.length > 0 && selectedCount === ids.length;
+    selAll.indeterminate = selectedCount > 0 && selectedCount < ids.length;
+  }
+  function syncBulkBar() {
+    const wrap = document.getElementById("bulkBarWrap");
+    if (!wrap) return;
+    wrap.innerHTML = renderBulkBar();
+    wireBulkBar();
+  }
+  function wireBulkBar() {
+    const dis = document.getElementById("btnBulkDisable");
+    if (dis) dis.addEventListener("click", function () { openBulkConfirm("disable"); });
+    const en = document.getElementById("btnBulkEnable");
+    if (en) en.addEventListener("click", function () { openBulkConfirm("enable"); });
+    const cancel = document.getElementById("btnBulkCancel");
+    if (cancel) cancel.addEventListener("click", function () { exitBulkMode(); });
+  }
+  function enterBulkMode() {
+    orgState.bulkMode = true;
+    orgState.selectedIds = new Set();
+    renderContent();
+  }
+  function exitBulkMode() {
+    orgState.bulkMode = false;
+    orgState.selectedIds = new Set();
+    renderContent();
+  }
+  function openBulkConfirm(type) {
+    const n = orgState.selectedIds.size;
+    if (n === 0) return;
+    const title = type === "disable" ? "批次停用帳號" : "批次啟用帳號";
+    const body = type === "disable"
+      ? "確定要停用選取的 " + n + " 筆帳號嗎？停用後這些帳號將無法登入。"
+      : "確定要重新啟用選取的 " + n + " 筆帳號嗎？";
+    const html = '<div class="confirm-modal"><h3>' + title + '</h3><p>' + body + '</p>' +
+      '<div class="cm-foot"><button class="btn btn-secondary" id="confirmCancel">取消</button>' +
+      '<button class="btn btn-primary" id="confirmOk">' + (type === "disable" ? "停用" : "啟用") + '</button></div></div>';
+    document.getElementById("orgConfirmMask").innerHTML = html;
+    document.getElementById("orgConfirmMask").classList.add("open");
+    document.getElementById("confirmCancel").addEventListener("click", closeConfirm);
+    document.getElementById("confirmOk").addEventListener("click", function () {
+      runBulkAction(type === "disable" ? "disabled" : "active");
+    });
+  }
+  function runBulkAction(newStatus) {
+    const ids = Array.from(orgState.selectedIds);
+    ids.forEach(function (id) {
+      const a = ACCOUNTS.find(function (x) { return x.id === id; });
+      if (a) a.status = newStatus;
+    });
+    showToast("已" + (newStatus === "disabled" ? "停用" : "啟用") + " " + ids.length + " 筆帳號");
+    closeConfirm();
+    exitBulkMode();
+  }
+  function wireAccountsPage() {
+    bindListRowActions();
+    const searchEl = document.getElementById("acctSearch");
+    if (searchEl) searchEl.addEventListener("input", function () { orgState.search = this.value; refreshAccountsList(); });
+    ddBind("acctDeptFilter");
+    ddBind("acctRoleFilter");
+    ddBind("acctStatusFilter");
+    document.querySelectorAll("[data-tree]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        orgState.deptFilter = btn.getAttribute("data-tree");
+        ddSetValue("acctDeptFilter", orgState.deptFilter, { silent: true });
+        syncOrgTreeActive();
+        refreshAccountsScope();
+      });
+    });
+    const btnNew = document.getElementById("btnNewAccount");
+    if (btnNew) btnNew.addEventListener("click", function () { openAccountDrawer(null); });
+    const btnBulk = document.getElementById("btnBulkToggle");
+    if (btnBulk) btnBulk.addEventListener("click", enterBulkMode);
+    wireBulkBar();
+  }
+
+  // ---- 角色 → 可用功能即時預覽 ----
+  function renderPermPreview(role) {
+    const active = featuresForRole(role);
+    const items = allPermItems().map(function (item) {
+      const on = active.indexOf(item.label) !== -1;
+      return '<span class="perm-item' + (on ? "" : " is-off") + '">' + (on ? icon("check") : "") + item.label + '</span>';
+    }).join("");
+    return '<div class="perm-preview"><div class="pp-title">' + icon("idCard") + '此身份可用功能</div><div class="perm-list">' + items + '</div></div>';
+  }
+
+  // ---- 建立／編輯帳號 Drawer ----
+  function openAccountDrawer(accountId) {
+    orgState.editingId = accountId || null;
+    const acct = accountId ? ACCOUNTS.find(function (a) { return a.id === accountId; }) : null;
+    const isEdit = !!acct;
+    const isAdmin = state.demoRole === "companyAdmin";
+    const roleChoices = allowedRoleOptions();
+    const scopedDepts = DEPARTMENTS.filter(function (d) { return isAdmin || d.id === DEMO_DEPT_FOR_MANAGER; });
+    const defaultDept = isAdmin ? scopedDepts[0].id : DEMO_DEPT_FOR_MANAGER;
+
+    const deptOptions = scopedDepts.map(function (d) { return { value: d.id, label: d.name }; });
+    const initialDept = acct ? acct.deptId : defaultDept;
+    const roleOptions = roleChoices.map(function (r) { return { value: r, label: ROLES[r].label }; });
+    const countryOptions = COUNTRY_CODES.map(function (c) { return { value: c.iso, label: c.name }; });
+    const initialCountry = acct ? acct.countryIso : "TW";
+    const initialRole = acct ? acct.role : roleChoices[0];
+
+    let html = '<div class="drawer-head"><h2>' + (isEdit ? "編輯帳號" : "新增帳號") + '</h2>' +
+      '<button class="drawer-close" id="drawerClose">' + icon("x") + '</button></div>';
+    html += '<div class="drawer-body">';
+    // 帳號是唯一識別鍵，建立後鎖死不可改——避免改了帳號但登入紀錄/對外系統對不上
+    // 星號維持顯示（Alvie 2026-08-12 確認：disabled 樣式底下星號不衝突，拿掉說明文字/改淡背景就夠了）
+    // 2026-08-12：maxlength 改採舊網站實測值（Alvie 提供，非暫定）——帳號 50、姓名 50、
+    // 員工編號 50、電子信箱 250、手機 15（純號碼，國碼另外用下拉選，不計入）、部門名稱 15、部門代碼 15
+    html += field("account", "帳號", true,
+      '<input type="text" id="fAccount" autocomplete="off" maxlength="50"' + (isEdit ? ' disabled class="is-readonly"' : "") + ' value="' + escAttr(acct ? acct.account : "") + '">');
+    html += '<div class="field-row">';
+    html += field("dept", "部門", true, renderDropdown("fDept", deptOptions, initialDept, { disabled: !isAdmin }));
+    html += field("role", "角色", true, renderDropdown("fRole", roleOptions, initialRole, {
+      onChange: function (v) { document.getElementById("permPreviewWrap").innerHTML = renderPermPreview(v); }
+    }));
+    html += '</div>';
+    html += '<div id="permPreviewWrap">' + renderPermPreview(initialRole) + '</div>';
+    html += field("name", "姓名", true, '<input type="text" id="fName" maxlength="50" value="' + escAttr(acct ? acct.name : "") + '">');
+    html += '<div class="field-row">';
+    html += field("pwd", isEdit ? "重設密碼" : "設定密碼", !isEdit, '<input type="password" id="fPwd" maxlength="16" autocomplete="new-password">');
+    html += field("pwd2", "再次確認", !isEdit, '<input type="password" id="fPwd2" maxlength="16" autocomplete="new-password">');
+    html += '</div>';
+    html += '<div class="hint" style="margin:-10px 0 16px">長度 8–16 碼，須英數字混合並包含大寫及小寫英文字母' + (isEdit ? '；留空表示不變更密碼' : '') + '</div>';
+    html += field("empNo", "員工編號", false, '<input type="text" id="fEmpNo" maxlength="50" value="' + escAttr(acct ? acct.empNo : "") + '">');
+    html += '<div class="field-group" data-field="phone"><label>行動電話<span class="req">*</span></label><div class="field-row">' +
+      '<div style="flex:1.5">' + renderDropdown("fCountry", countryOptions, initialCountry, {
+        onChange: function (v) { document.getElementById("fDial").textContent = dialDisplay(v); }
+      }) + '</div>' +
+      '<div class="dial-code" id="fDial">' + dialDisplay(initialCountry) + '</div>' +
+      '<input type="tel" id="fPhone" placeholder="手機號碼" style="flex:2" maxlength="15" value="' + escAttr(acct ? acct.phone : "") + '">' +
+      '</div><div class="err-msg" id="err-phone" style="display:none"></div></div>';
+    html += field("email", "電子信箱", true, '<input type="email" id="fEmail" maxlength="250" value="' + escAttr(acct ? acct.email : "") + '">');
+    html += '<div class="field-divider"></div>';
+    html += '<div class="toggle-row"><div><div class="tr-label">開啟國際簡訊</div><div class="tr-sub">關閉後此帳號僅能發送台灣門號簡訊</div></div>' + toggleHtml("fIntlSms", acct ? acct.intlSms : false) + '</div>';
+    html += '<div class="toggle-row"><div><div class="tr-label">啟用帳號</div><div class="tr-sub">關閉後此帳號將無法登入</div></div>' + toggleHtml("fEnabled", acct ? acct.status === "active" : true) + '</div>';
+    html += '</div>';
+    html += '<div class="drawer-foot"><button class="btn btn-secondary" id="drawerCancel">取消</button><button class="btn btn-primary" id="drawerSave">' + (isEdit ? "儲存" : "建立帳號") + '</button></div>';
+
+    document.getElementById("orgDrawer").innerHTML = html;
+    document.getElementById("orgDrawerMask").classList.add("open");
+    document.getElementById("orgDrawer").classList.add("open");
+    wireDrawer();
+  }
+  function closeDrawer() {
+    document.getElementById("orgDrawerMask").classList.remove("open");
+    document.getElementById("orgDrawer").classList.remove("open");
+  }
+  function wireDrawer() {
+    document.getElementById("drawerClose").addEventListener("click", closeDrawer);
+    document.getElementById("drawerCancel").addEventListener("click", closeDrawer);
+    ddBind("fDept");
+    ddBind("fRole");
+    ddBind("fCountry");
+    // 帳號格式即時提示，只在新增時掛（編輯頁欄位 disabled，不會有 input 事件）
+    if (!orgState.editingId) {
+      document.getElementById("fAccount").addEventListener("input", function () {
+        if (this.value && !/^[A-Za-z0-9]*$/.test(this.value)) setFieldError("account", "帳號請輸入英文字母或數字");
+        else clearFieldError("account");
+      });
+    }
+    document.getElementById("drawerSave").addEventListener("click", saveAccountFromDrawer);
+  }
+  function saveAccountFromDrawer() {
+    clearFieldErrors();
+    const accountVal = document.getElementById("fAccount").value.trim();
+    const deptVal = ddValue("fDept");
+    const roleVal = ddValue("fRole");
+    const nameVal = document.getElementById("fName").value.trim();
+    const pwdVal = document.getElementById("fPwd").value;
+    const pwd2Val = document.getElementById("fPwd2").value;
+    const empNoVal = document.getElementById("fEmpNo").value.trim();
+    const countryVal = ddValue("fCountry");
+    const phoneVal = document.getElementById("fPhone").value.trim();
+    const emailVal = document.getElementById("fEmail").value.trim();
+    const intlSmsVal = document.getElementById("fIntlSms").checked;
+    const enabledVal = document.getElementById("fEnabled").checked;
+    const isEdit = !!orgState.editingId;
+    const pwdRe = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const accountRe = /^[A-Za-z0-9]+$/;
+    let hasError = false;
+
+    if (!accountVal) { setFieldError("account", "請輸入帳號"); hasError = true; }
+    else {
+      const dup = ACCOUNTS.some(function (a) { return a.account.toLowerCase() === accountVal.toLowerCase() && a.id !== orgState.editingId; });
+      if (dup) { setFieldError("account", "此帳號已被使用"); hasError = true; }
+      // 帳號格式規則（現行 e8d 既有規則：只能英文字母/數字）只套用在新增，編輯頁帳號欄位
+      // disabled、值不會變，既有帳號可能是舊規則建立的（如帶點的 ben.chen），不應該被新規則擋下
+      else if (!isEdit) {
+        if (!accountRe.test(accountVal)) { setFieldError("account", "帳號請輸入英文字母或數字"); hasError = true; }
+        else if (accountVal.length < 4 || accountVal.length > 50) { setFieldError("account", "帳號長度需為 4–50 字元"); hasError = true; }
+      }
+    }
+    if (!nameVal) { setFieldError("name", "請輸入姓名"); hasError = true; }
+    if (!deptVal) { setFieldError("dept", "請選擇部門"); hasError = true; }
+    if (!roleVal) { setFieldError("role", "請選擇角色"); hasError = true; }
+    if (!isEdit || pwdVal || pwd2Val) {
+      if (!isEdit && !pwdVal) { setFieldError("pwd", "請設定密碼"); hasError = true; }
+      else if (pwdVal && !pwdRe.test(pwdVal)) { setFieldError("pwd", "密碼須為 8–16 碼英數混合，含大小寫"); hasError = true; }
+      if (pwdVal !== pwd2Val) { setFieldError("pwd2", "兩次密碼輸入不一致"); hasError = true; }
+    }
+    // 2026-08-12：舊 e8d 這兩欄是必填，補上（原本只有格式沒有必填）
+    if (!phoneVal) { setFieldError("phone", "請輸入手機號碼"); hasError = true; }
+    if (!emailVal) { setFieldError("email", "請輸入電子信箱"); hasError = true; }
+    else if (!emailRe.test(emailVal)) { setFieldError("email", "請輸入正確的 E-mail 格式"); hasError = true; }
+    if (hasError) return;
+
+    if (isEdit) {
+      const acct = ACCOUNTS.find(function (a) { return a.id === orgState.editingId; });
+      acct.account = accountVal; acct.deptId = deptVal; acct.role = roleVal; acct.name = nameVal;
+      acct.empNo = empNoVal; acct.countryIso = countryVal; acct.phone = phoneVal; acct.email = emailVal;
+      acct.intlSms = intlSmsVal; acct.status = enabledVal ? "active" : "disabled";
+      showToast("已儲存「" + nameVal + "」的變更");
+    } else {
+      ACCOUNTS.push({
+        id: "a" + (nextAccountSeq++), status: enabledVal ? "active" : "disabled", name: nameVal, account: accountVal,
+        deptId: deptVal, role: roleVal, empNo: empNoVal, countryIso: countryVal, phone: phoneVal, email: emailVal, intlSms: intlSmsVal
+      });
+      showToast("已建立帳號「" + nameVal + "」");
+    }
+    closeDrawer();
+    renderContent();
+  }
+
+  // ---- 停用／啟用／刪除 確認框（沿用系統 Modal 定案：危險/一般確認無 ✕、footer 無分隔線） ----
+  // 2026-08-11 第二輪：列表拿掉了停用/啟用連結（改到修改抽屜的開關），這裡只剩「刪除」會走到，
+  // 批次停用/啟用另外走 openBulkConfirm()/runBulkAction()，跟這裡的單筆刪除是兩條獨立路徑
+  function openConfirm(id, kind) {
+    orgState.pendingConfirm = { id: id, kind: kind };
+    let title, body;
+    if (kind === "department") {
+      const dept = DEPARTMENTS.find(function (d) { return d.id === id; });
+      title = "刪除部門"; body = "確定要刪除「" + dept.name + "」嗎？此操作無法復原。";
+    } else {
+      const acct = ACCOUNTS.find(function (a) { return a.id === id; });
+      title = "刪除帳號"; body = "確定要刪除「" + acct.name + "」嗎？此操作無法復原。";
+    }
+    const html = '<div class="confirm-modal"><h3>' + title + '</h3><p>' + body + '</p>' +
+      '<div class="flag-note" style="margin-top:14px">' + icon("flag") +
+      '<div>刪除方式（硬刪除或改為停用）尚待 PM 確認，此為 UI 示意<span class="todo-tag">TODO</span></div></div>' +
+      '<div class="cm-foot"><button class="btn btn-secondary" id="confirmCancel">取消</button>' +
+      '<button class="btn btn-danger" id="confirmOk">刪除</button></div></div>';
+    document.getElementById("orgConfirmMask").innerHTML = html;
+    document.getElementById("orgConfirmMask").classList.add("open");
+    document.getElementById("confirmCancel").addEventListener("click", closeConfirm);
+    document.getElementById("confirmOk").addEventListener("click", runConfirm);
+  }
+  function closeConfirm() {
+    document.getElementById("orgConfirmMask").classList.remove("open");
+    orgState.pendingConfirm = null;
+  }
+  function runConfirm() {
+    const pc = orgState.pendingConfirm;
+    if (!pc) return;
+    if (pc.kind === "department") {
+      const idx = DEPARTMENTS.findIndex(function (d) { return d.id === pc.id; });
+      const name = DEPARTMENTS[idx].name;
+      DEPARTMENTS.splice(idx, 1);
+      showToast("已刪除部門「" + name + "」");
+    } else {
+      const acct = ACCOUNTS.find(function (a) { return a.id === pc.id; });
+      ACCOUNTS.splice(ACCOUNTS.indexOf(acct), 1);
+      showToast("已刪除「" + acct.name + "」");
+    }
+    closeConfirm();
+    renderContent();
+  }
+
+  // ============================================================
+  // 二、部門（含指派主管，不另開頁）
+  // ============================================================
+  function renderManagerCell(d) {
+    const isAdmin = state.demoRole === "companyAdmin";
+    const manager = d.managerId ? ACCOUNTS.find(function (a) { return a.id === d.managerId; }) : null;
+    const label = manager ? manager.name : '<span class="muted">未指派</span>';
+    if (!isAdmin) return label;
+    return '<span style="display:inline-flex;align-items:center;gap:8px">' + label +
+      '<button class="btn-text" data-assign="' + d.id + '" style="font-size:var(--fs-caption)">' + (manager ? "重新指派" : "指派") + '</button></span>';
+  }
+  function renderDeptList() {
+    const isAdmin = state.demoRole === "companyAdmin";
+    const depts = isAdmin ? DEPARTMENTS : DEPARTMENTS.filter(function (d) { return d.id === DEMO_DEPT_FOR_MANAGER; });
+    const rows = depts.map(function (d) {
+      const cnt = ACCOUNTS.filter(function (a) { return a.deptId === d.id; }).length;
+      let actions = "";
+      if (isAdmin) {
+        actions = '<div class="row-actions">' +
+          '<button class="btn-text" data-edit-dept="' + d.id + '">編輯</button>' +
+          '<button class="btn-danger-text" data-del-dept="' + d.id + '"' + (cnt > 0 ? ' disabled title="部門底下還有帳號，需先搬移或停用才能刪除"' : "") + '>刪除</button>' +
+          '</div>';
+      }
+      return '<tr>' +
+        '<td class="name-cell wrap-cell">' + escAttr(d.name) + '</td>' +
+        '<td class="muted num-cell">' + d.code + '</td>' +
+        '<td data-dept-manager-cell="' + d.id + '">' + renderManagerCell(d) + '</td>' +
+        '<td class="num-cell muted">' + cnt + ' 人</td>' +
+        '<td class="col-actions">' + actions + '</td>' +
+        '</tr>';
+    }).join("");
+    return '<div class="table-card"><div class="table-scroll"><table class="data-table is-interactive dept-table"><thead><tr>' +
+      '<th style="width:27%">部門名稱</th><th style="width:17%">部門代碼</th><th style="width:25%">目前部門主管</th>' +
+      '<th style="width:14%">帳號數</th><th class="col-actions" style="width:17%">操作</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  }
+  function renderDepartmentsPage() {
+    const isAdmin = state.demoRole === "companyAdmin";
+    let html = '<div class="page-head"><h1>部門</h1></div>';
+    html += '<div class="page-sub">' + (isAdmin ? "管理部門與各部門主管指派" : "檢視您所屬部門的資訊（唯讀）") + '</div>';
+    if (isAdmin) html += '<div class="filter-bar" style="justify-content:flex-end"><button class="btn btn-primary" id="btnNewDept">' + icon("plus") + '新增部門</button></div>';
+    html += '<div id="deptListWrap">' + renderDeptList() + '</div>';
+    return html;
+  }
+  // 新增／編輯部門共用同一個小型表單 modal（deptId=null 代表新增）。
+  // 2026-08-11 第二輪：原本「改名」是表格 inline 編輯，但補了必填的「部門代碼」欄位後
+  // 一個儲存格塞兩個輸入框太擠，改成跟新增部門同一個 modal，順便統一了兩條路徑的驗證邏輯
+  function deptCodeTaken(code, excludeId) {
+    return DEPARTMENTS.some(function (d) { return d.id !== excludeId && d.code.toLowerCase() === code.toLowerCase(); });
+  }
+  function openDeptFormModal(deptId) {
+    const dept = deptId ? DEPARTMENTS.find(function (d) { return d.id === deptId; }) : null;
+    const isEdit = !!dept;
+    // maxlength 採舊網站實測值（見 openAccountDrawer 開頭的說明）
+    const html = '<div class="confirm-modal"><h3>' + (isEdit ? "編輯部門" : "新增部門") + '</h3>' +
+      '<div class="field-group" data-field="deptName" style="margin-top:14px"><label>部門名稱<span class="req">*</span></label>' +
+      '<input type="text" id="deptNameInput" maxlength="15" value="' + escAttr(dept ? dept.name : "") + '"><div class="err-msg" id="err-deptName" style="display:none"></div></div>' +
+      '<div class="field-group" data-field="deptCode"><label>部門代碼<span class="req">*</span></label>' +
+      '<input type="text" id="deptCodeInput" placeholder="例如 SALES01" maxlength="15" value="' + escAttr(dept ? dept.code : "") + '">' +
+      '<div class="err-msg" id="err-deptCode" style="display:none"></div></div>' +
+      '<div class="cm-foot"><button class="btn btn-secondary" id="deptFormCancel">取消</button><button class="btn btn-primary" id="deptFormOk">' + (isEdit ? "儲存" : "建立") + '</button></div></div>';
+    document.getElementById("orgConfirmMask").innerHTML = html;
+    document.getElementById("orgConfirmMask").classList.add("open");
+    document.getElementById("deptNameInput").focus();
+    document.getElementById("deptFormCancel").addEventListener("click", closeConfirm);
+    document.getElementById("deptFormOk").addEventListener("click", function () {
+      clearFieldErrors();
+      const nameVal = document.getElementById("deptNameInput").value.trim();
+      const codeVal = document.getElementById("deptCodeInput").value.trim();
+      let hasError = false;
+      if (!nameVal) { setFieldError("deptName", "請輸入部門名稱"); hasError = true; }
+      if (!codeVal) { setFieldError("deptCode", "請輸入部門代碼"); hasError = true; }
+      else if (!/^[A-Za-z0-9]+$/.test(codeVal)) { setFieldError("deptCode", "只能是英文字母與數字"); hasError = true; }
+      else if (deptCodeTaken(codeVal, deptId)) { setFieldError("deptCode", "這個部門代碼已經被使用"); hasError = true; }
+      if (hasError) return;
+      if (isEdit) {
+        dept.name = nameVal; dept.code = codeVal.toUpperCase();
+        showToast("已儲存「" + nameVal + "」的變更");
+      } else {
+        DEPARTMENTS.push({ id: "d" + Date.now().toString(36), name: nameVal, code: codeVal.toUpperCase(), managerId: null });
+        showToast("已新增部門「" + nameVal + "」");
+      }
+      closeConfirm();
+      renderContent();
+    });
+  }
+  function startAssignManager(deptId) {
+    const cell = document.querySelector('[data-dept-manager-cell="' + deptId + '"]');
+    const dept = DEPARTMENTS.find(function (d) { return d.id === deptId; });
+    const deptAccounts = ACCOUNTS.filter(function (a) { return a.deptId === deptId; });
+    const options = [{ value: "", label: "未指派" }].concat(deptAccounts.map(function (a) { return { value: a.id, label: a.name }; }));
+    cell.innerHTML = renderDropdown("assignSelect", options, dept.managerId || "", {
+      className: "manager-select",
+      onChange: function (value) {
+        const newManagerId = value || null;
+        const oldManagerId = dept.managerId;
+        // 換人＝把舊主管的角色退回一般使用者、新主管的角色升成部門管理員，
+        // 讓「部門頁指派主管」跟「帳號頁角色」兩處資料保持一致（一個部門同時間只有一位主管）
+        if (oldManagerId && oldManagerId !== newManagerId) {
+          const oldAcct = ACCOUNTS.find(function (a) { return a.id === oldManagerId; });
+          if (oldAcct) oldAcct.role = "user";
+        }
+        dept.managerId = newManagerId;
+        let msg = "已取消" + dept.name + "主管指派";
+        if (newManagerId) {
+          const newAcct = ACCOUNTS.find(function (a) { return a.id === newManagerId; });
+          newAcct.role = "deptManager";
+          msg = "已指派「" + newAcct.name + "」為" + dept.name + "主管";
+        }
+        showToast(msg);
+        renderContent();
+      }
+    });
+    ddBind("assignSelect");
+    // 延到下一輪事件迴圈才自動展開：這個呼叫是在「指派/換人」按鈕的 click handler 裡觸發的，
+    // 同一個 click 事件還在往上冒泡到 document 的「點外面關閉」監聽器，若同步呼叫 ddOpen()，
+    // 會被那個監聽器誤判成「點了下拉外面」當場關掉（e.target 還是舊的觸發按鈕，不在新面板/新按鈕裡）
+    setTimeout(function () { ddOpen(document.getElementById("dd-assignSelect")); }, 0);
+  }
+  function wireDepartmentsPage() {
+    const btnNew = document.getElementById("btnNewDept");
+    if (btnNew) btnNew.addEventListener("click", function () { openDeptFormModal(null); });
+    document.querySelectorAll("[data-edit-dept]").forEach(function (btn) {
+      btn.addEventListener("click", function () { openDeptFormModal(btn.getAttribute("data-edit-dept")); });
+    });
+    document.querySelectorAll("[data-assign]").forEach(function (btn) {
+      btn.addEventListener("click", function () { startAssignManager(btn.getAttribute("data-assign")); });
+    });
+    document.querySelectorAll("[data-del-dept]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (btn.hasAttribute("disabled")) return;
+        openConfirm(btn.getAttribute("data-del-dept"), "department");
+      });
+    });
+  }
+
+  // ============================================================
+  // Demo 身份切換（純原型工具，正式產品不會有，見左下角深色藥丸列）
+  // ============================================================
+  function setDemoRole(role) {
+    if (role === state.demoRole) return;
+    state.demoRole = role;
+    orgState.search = ""; orgState.deptFilter = "all"; orgState.roleFilter = "all"; orgState.statusFilter = "all";
+
+    // 切身份後，目前停留的頁面可能整組消失（如「組織與子帳號」）或只是該子項目被過濾掉
+    // （如「管理報表」）——兩種都要把人帶回總覽，不能留在一個側欄已經點不到的頁面上
+    const currentGroup = NAV.find(function (n) { return n.id === state.activeTop; });
+    const groupHidden = currentGroup && currentGroup.kind === "group" && visibleChildren(currentGroup).length === 0;
+    const childHidden = currentGroup && currentGroup.kind === "group" && !groupHidden && state.activeChildId &&
+      !visibleChildren(currentGroup).some(function (c) { return c.id === state.activeChildId; });
+
+    if (groupHidden || childHidden) {
+      const hiddenLabel = groupHidden ? currentGroup.label : (findChild(currentGroup, state.activeChildId) || {}).label;
+      state.activeTop = "overview"; state.activeChildId = null; state.expandedGroup = null; state.activeTabIndex = 0;
+      showToast("已切換為「" + ROLES[role].label + "」身份（demo）：看不到「" + hiddenLabel + "」，已返回總覽");
+    } else {
+      showToast("已切換為「" + ROLES[role].label + "」身份（demo）");
+    }
+    buildSidebar();
+    syncSidebar(true);
+    renderContent();
+    syncDemoRoleBar();
+  }
+  function syncDemoRoleBar() {
+    document.querySelectorAll("#demoRoleBar [data-demo-role]").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-demo-role") === state.demoRole);
+    });
+  }
+  document.querySelectorAll("#demoRoleBar [data-demo-role]").forEach(function (btn) {
+    btn.addEventListener("click", function () { setDemoRole(btn.getAttribute("data-demo-role")); });
+  });
+  document.getElementById("orgDrawerMask").addEventListener("click", closeDrawer);
+  syncDemoRoleBar();
+
   // ---- topbar popovers ----
   function wirePopover(btnId, popId) {
     const btn = document.getElementById(btnId);
@@ -1233,14 +2719,14 @@
     showToast("已登出（示意）");
   });
 
-  // ---- toast ----
+  // ---- toast（全站共用，成功訊息一律用這個 —— icon 用系統既有的 check，不是自訂） ----
   let toastTimer = null;
   function showToast(msg) {
     const t = document.getElementById("toast");
-    t.textContent = msg;
+    t.innerHTML = icon("check") + "<span>" + escAttr(msg) + "</span>";
     t.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2400);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 3500);
   }
 
   // ---- 側欄點數卡：儲值捷徑 ----
