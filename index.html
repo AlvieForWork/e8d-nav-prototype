@@ -508,6 +508,7 @@
   .btn-text:hover { color: var(--accent-active); } /* 2026-08-11：Alvie 不喜歡底線，改用深一階橘色（primary/900）表示 hover */
   .btn-danger-text { background: none; border: none; padding: 0; height: auto; color: #EC2D30; font-weight: 600; font-family: var(--font-ui); font-size: var(--fs-body); cursor: pointer; transition: color .12s ease; }
   .btn-danger-text:hover { color: #D8262B; } /* 2026-08-11：跟 .btn-text 同一次修正，拿掉底線改深一階紅（danger/800，跟 .btn-danger 的 hover 同一個色） */
+  .btn-danger-text:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
   .btn-danger { background: #EC2D30; color: #fff; }
   .btn-danger:hover { background: #D8262B; }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -591,8 +592,11 @@
   .data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); line-height: var(--lh-body); }
   .data-table th {
     text-align: left; font-size: var(--fs-caption); font-weight: 700; color: var(--text-muted); text-transform: uppercase;
-    letter-spacing: .03em; padding: 12px 16px; border-bottom: 1px solid var(--border); white-space: nowrap;
+    letter-spacing: .03em; padding: 12px 16px; border-bottom: 1px solid var(--border);
   }
+  /* 2026-08-13：欄位變窄後 nowrap 表頭會橫向溢出、疊到隔壁欄標題（例如「所屬部門」疊到「角色」），
+     改回允許換行——表頭折成兩行是常見、可接受的作法，跟本體資料換行是分開的兩件事 */
+  .acct-table th, .dept-table th { white-space: normal; }
   .data-table td { padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
   .data-table tr:last-child td { border-bottom: none; }
   /* 2026-08-11：hover 只給「整列可互動」的表格（帳號、部門），讀唯讀表格（權限總覽）不套 .is-interactive
@@ -607,12 +611,11 @@
   .data-table .row-actions { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 14px; }
   .data-table .muted { color: var(--text-muted); }
   .data-table .name-cell { font-weight: 600; }
-  /* 識別碼類欄（員工編號／手機／部門代碼／帳號數）固定不換行——這些是完整識別字串，
-     拆行反而難辨認，寧可欄位給足寬度也不要折成兩行（2026-08-12） */
-  /* overflow:hidden 是防呆：欄寬在絕大多數桌機寬度下都夠用（已實測），只有「視窗很窄＋
-     剛好遇到極端長的員編/門號」這種罕見組合才會頂到邊界——與其讓文字溢出跟隔壁欄「打架」
-     （nowrap 不換行的內容溢出不會撐開表格，但會視覺上疊到鄰欄），寧可安靜裁掉超出的部分 */
-  .data-table .num-cell { font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+  /* .num-cell：2026-08-13 起只剩部門表的「部門代碼／帳號數」在用（短、格式固定，
+     不換行沒有代價）。員工編號／手機已經跟 Alvie 核對過改走 .wrap-cell 允許換行
+     ——這兩欄之前為了蓋住刻意插入的極端值（TECH-2024-0012、海外門號）硬撐寬度，
+     把姓名/帳號/E-mail 這些欄擠到過度換行，拿掉「絕對不換行」後空間才夠分 */
+  .data-table .num-cell { font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   /* ---- 狀態 badge（dot 版，沿用系統色票 hex，跟 .stat-card .s-delta 同一組） ---- */
   .badge-dot { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: var(--radius-full); font-size: var(--fs-caption); font-weight: 600; white-space: nowrap; }
@@ -645,14 +648,25 @@
   .empty-state > .ico { width: 40px; height: 40px; color: var(--text-disabled); margin-bottom: 14px; }
   .empty-state p { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); margin: 0 0 18px; }
 
-  /* ---- 表格固定寬度、長內容欄位內換行（2026-08-12 第二版，取代原本的截斷＋tooltip）：
+  /* ---- 表格固定寬度、長內容欄位內換行（2026-08-12 第二版，取代原本的截斷＋tooltip；
+     2026-08-13 第五版：帳號表除了帳號狀態／操作，其餘 7 欄——姓名／帳號／所屬部門／
+     角色／員工編號／手機／E-mail——全部用 .wrap-cell。員工編號／手機原本是唯二「絕對
+     不換行」的例外，但為了蓋住刻意插入的極端值（TECH-2024-0012、海外門號）硬撐寬度，
+     反而把姓名/帳號/E-mail 擠到過度換行；跟 Alvie 核對後拿掉這個例外，7 欄一致允許換行，
+     欄寬改成蓋住一般資料、極端值當例外多換幾行）：
      table-layout:fixed 讓表格寬度只由 th 的 width 決定，內容再長也不會把表格撐寬、
-     不會把「操作」欄擠出可視範圍。姓名／帳號／所屬部門／E-mail 用 .wrap-cell，
-     內容超出欄寬時往下換行、列高跟著增加，完整資料一律看得到，不再靠 hover 才看到全文，
-     所以這幾欄也拿掉了 tooltip（data-tip 屬性直接不掛，不用改 tooltip 引擎本身——
-     頂部圖示那組 tooltip 沒受影響，兩者共用同一套引擎，差別只在有沒有掛 data-tip）。
-     .table-scroll 留著當窄視窗的保護網，正常桌機寬度下欄寬加總不會觸發它 */
+     不會把「操作」欄擠出可視範圍。內容超出欄寬時往下換行、列高跟著增加，完整資料一律
+     看得到，不靠 hover 才看到全文，這些欄也就不掛 tooltip（data-tip 屬性直接不掛，不用改
+     tooltip 引擎本身——頂部圖示那組 tooltip 沒受影響，兩者共用同一套引擎，差別只在有沒有
+     掛 data-tip）。.table-scroll 留著當窄視窗的保護網，正常桌機寬度下欄寬加總不會觸發它。
+     2026-08-13：光有 overflow-x:auto 不夠——table-layout:fixed 配純百分比欄寬時，
+     表格永遠等於容器寬度，內容再窄也不會超出去，保護網形同虛設（縮視窗時所有欄位會
+     無限跟著擠到欄位標題疊字、手機號碼被裁），所以 .acct-table 補一個 min-width（等於
+     欄寬第四版校正時測過「所有短固定欄都放得下」的那個桌機寬度）：容器比這個窄，表格
+     維持這個最小寬度、交給 .table-scroll 橫向捲動；容器比這個寬，table-layout:fixed
+     仍照百分比伸展填滿，行為不變 */
   .table-scroll { overflow-x: auto; }
+  .acct-table { min-width: 850px; }
   .data-table.acct-table, .data-table.dept-table { table-layout: fixed; }
   .data-table td.wrap-cell { overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
 
@@ -722,7 +736,11 @@
   .field-group input.is-readonly { background: var(--bg); color: var(--text-muted); cursor: not-allowed; }
   .field-group input.is-readonly:focus { border-color: var(--border); box-shadow: none; }
   .field-group .dd-trigger.is-error { border-color: #EC2D30; }
-  .field-group .hint { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 5px; }
+  /* 2026-08-13：.hint 拿掉 .field-group 前綴——密碼規則說明那個 .hint 是獨立 div，不在任何
+     .field-group 裡面（field-row 關掉後才接的兄弟節點），原本的 descendant selector 永遠比對
+     不到，字級掉回 body 預設的 16px（--fs-body），比同階的 .err-msg 明顯大一號。全站唯一一處
+     用 .hint 的地方就是它，改成不需要祖先層級的寫法直接修好，token 本身沒換，維持 --fs-caption */
+  .hint { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 5px; }
   .field-group .err-msg { font-size: var(--fs-caption); color: #EC2D30; margin-top: 5px; display: flex; align-items: center; gap: 4px; }
   .field-group .err-msg .ico { width: 12px; height: 12px; flex-shrink: 0; }
   .field-row { display: flex; gap: 10px; }
@@ -760,7 +778,8 @@
   .drawer-close:hover { background: var(--surface-2); color: var(--text); }
   .drawer-close .ico { width: 18px; height: 18px; }
   .drawer-body { flex: 1; overflow-y: auto; padding: 22px 24px; }
-  .drawer-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .drawer-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .drawer-foot-right { display: flex; gap: 10px; }
 
   /* ---- 確認 modal（沿用系統 Modal 定案：Danger/Confirm 無 ✕、footer 無分隔線） ---- */
   .confirm-mask {
@@ -2072,6 +2091,9 @@
       '<div class="bulk-bar-spacer"></div>' +
       '<button class="btn btn-secondary btn-sm" id="btnBulkDisable"' + (n === 0 ? " disabled" : "") + '>批次停用</button>' +
       '<button class="btn btn-secondary btn-sm" id="btnBulkEnable"' + (n === 0 ? " disabled" : "") + '>批次啟用</button>' +
+      // 批次刪除刻意不用 .btn-secondary 這種盒狀樣式（跟停用/啟用同形只換色很容易誤觸），
+      // 比照「取消」的文字連結形式、只換成危險色，形狀本身就跟另外兩個操作不一樣
+      '<button class="btn-danger-text" id="btnBulkDelete"' + (n === 0 ? " disabled" : "") + '>批次刪除</button>' +
       '<button class="btn-text" id="btnBulkCancel">取消</button>' +
       '</div>';
   }
@@ -2111,36 +2133,41 @@
         ? '<span class="badge-dot is-active"><span class="dot"></span>啟用</span>'
         : '<span class="badge-dot is-disabled"><span class="dot"></span>停用</span>';
       const manageable = a.role !== "companyAdmin";
-      let actions = '<button class="btn-text" data-edit="' + a.id + '">編輯</button>';
-      if (manageable) actions += '<button class="btn-danger-text" data-delete="' + a.id + '">刪除</button>';
+      // 2026-08-13：刪除從列表拿掉（比照停用的收法，改進編輯抽屜底部），列表只留「編輯」，
+      // 降低平常瀏覽時的誤觸風險——兩條刪除路徑（單筆／批次）都要多一個動作才會看到刪除按鈕
+      const actions = '<button class="btn-text" data-edit="' + a.id + '">編輯</button>';
       const checkCell = bulkMode
         ? '<td class="col-check">' + (manageable ? checkboxHtml(' class="rowChk" data-id="' + a.id + '"', orgState.selectedIds.has(a.id)) : "") + '</td>'
         : "";
-      // 姓名／帳號／所屬部門／E-mail 是長度不固定的欄位，內容超出欄寬時往下換行、完整顯示
-      // （不截斷、不掛 tooltip——帳號管理要一眼看到完整資料）；員工編號／手機走 .num-cell，
-      // 固定不換行、給足欄寬（見表頭 width）
+      // 2026-08-13 第五版：只有「帳號狀態」跟「操作」是真正的窄固定欄（內容本來就短、
+      // 不該再更寬）。其餘 7 欄（姓名／帳號／部門／角色／員工編號／手機／E-mail）全部
+      // 允許換行——員工編號／手機不再堅持「絕對不換行、寬度要蓋到 TECH-2024-0012／
+      // 海外門號這種刻意插入的極端值」，欄寬改成蓋住 16 筆正常台灣資料，極端值換多幾行
+      // 是允許的例外，不必為了它把其他欄擠爆。不截斷、不靠 tooltip，跟其他長度不定欄一致
+      const empNoText = a.empNo || "—";
+      const phoneText = dialDisplay(a.countryIso) + " " + a.phone;
       return '<tr>' + checkCell +
         '<td>' + statusBadge + '</td>' +
         '<td class="name-cell wrap-cell">' + escAttr(a.name) + '</td>' +
         '<td class="muted wrap-cell">' + escAttr(a.account) + '</td>' +
         '<td class="wrap-cell">' + escAttr(dept) + '</td>' +
-        '<td>' + ROLES[a.role].label + '</td>' +
-        '<td class="muted num-cell">' + (a.empNo || "—") + '</td>' +
-        '<td class="muted num-cell">' + dialDisplay(a.countryIso) + " " + a.phone + '</td>' +
+        '<td class="wrap-cell">' + ROLES[a.role].label + '</td>' +
+        '<td class="muted wrap-cell">' + empNoText + '</td>' +
+        '<td class="muted wrap-cell">' + phoneText + '</td>' +
         '<td class="muted wrap-cell">' + escAttr(a.email) + '</td>' +
         '<td class="col-actions"><div class="row-actions">' + actions + '</div></td>' +
         '</tr>';
     }).join("");
-    // 2026-08-12 第三版：欄寬全部改成「百分比」而不是固定 px。上一版用 px 寫死每欄寬度，
-    // 加總（~1150px）常常超過容器實際寬度（側欄+部門樹吃掉不少空間），table-layout:fixed
-    // 底下 px 欄寬是「最小需求」不是「上限」，容器裝不下時表格會被撐寬到超出去，這才是
-    // 上一輪表格還在橫向捲動、操作欄被切掉的根本原因。百分比欄寬 + 表格 width:100%，
-    // 欄寬永遠等於「容器寬度 × 各欄比例」，加總精確等於容器寬度，數學上不可能超出去，
-    // 不需要再靠橫向捲動或 sticky 補救。批次模式多一欄 checkbox，比例要重新分配過，
-    // 不能直接在原本 100% 之外加一欄（那樣一樣會超出 100%），所以兩組比例分開算
+    // 2026-08-12 第三版：欄寬全部改成「百分比」而不是固定 px，加總精確等於容器寬度，
+    // 數學上不可能超出去，不需要靠橫向捲動或 sticky 補救。批次模式多一欄 checkbox，
+    // 比例要重新分配，不能直接在原本 100% 之外加一欄，所以兩組比例分開算。
+    // 2026-08-13 第五版：跟 Alvie 核對過，員工編號／手機拿掉「絕對不換行」的要求後，
+    // 空間才夠分——量過實際內容給 7 個內容欄一個「一般 16 筆資料舒服放得下、只有刻意
+    // 插入的極端值（Alexander Wang-Chen 姓名／帳號、UAE 門號、TECH-2024-0012 員編）
+    // 才會多換幾行」的寬度，帳號狀態／操作維持窄固定（量過 badge／編輯按鈕的實際寬度）
     const W = bulkMode
-      ? { check: 4, status: 6.7, name: 9, account: 10.5, dept: 9.5, role: 8.5, empNo: 12.5, phone: 13.5, email: 12.5, actions: 12.5 }
-      : { status: 7, name: 9.5, account: 11, dept: 10, role: 9, empNo: 13, phone: 14, email: 13.5, actions: 13 };
+      ? { check: 4, status: 10.1, name: 9.1, account: 11.7, dept: 9, role: 12.8, empNo: 9.3, phone: 18.5, email: 8.1, actions: 7.4 }
+      : { status: 10.5, name: 9.5, account: 12.2, dept: 9.4, role: 13.3, empNo: 9.7, phone: 19.3, email: 8.4, actions: 7.7 };
     const checkHeadCell = bulkMode ? '<th class="col-check" style="width:' + W.check + '%">' + checkboxHtml(' id="selectAllChk"', false) + '</th>' : "";
     return '<div class="table-card"><div class="table-scroll"><table class="data-table is-interactive acct-table"><thead><tr>' + checkHeadCell +
       '<th style="width:' + W.status + '%">帳號狀態</th><th style="width:' + W.name + '%">姓名</th><th style="width:' + W.account + '%">帳號</th>' +
@@ -2199,9 +2226,6 @@
   function bindListRowActions() {
     document.querySelectorAll("[data-edit]").forEach(function (btn) {
       btn.addEventListener("click", function () { openAccountDrawer(btn.getAttribute("data-edit")); });
-    });
-    document.querySelectorAll("[data-delete]").forEach(function (btn) {
-      btn.addEventListener("click", function () { openConfirm(btn.getAttribute("data-delete"), "account"); });
     });
     document.querySelectorAll("#btnNewAccountEmpty").forEach(function (btn) {
       btn.addEventListener("click", function () { openAccountDrawer(null); });
@@ -2265,6 +2289,8 @@
     if (dis) dis.addEventListener("click", function () { openBulkConfirm("disable"); });
     const en = document.getElementById("btnBulkEnable");
     if (en) en.addEventListener("click", function () { openBulkConfirm("enable"); });
+    const del = document.getElementById("btnBulkDelete");
+    if (del) del.addEventListener("click", function () { openBulkConfirm("delete"); });
     const cancel = document.getElementById("btnBulkCancel");
     if (cancel) cancel.addEventListener("click", function () { exitBulkMode(); });
   }
@@ -2281,18 +2307,30 @@
   function openBulkConfirm(type) {
     const n = orgState.selectedIds.size;
     if (n === 0) return;
-    const title = type === "disable" ? "批次停用帳號" : "批次啟用帳號";
-    const body = type === "disable"
-      ? "確定要停用選取的 " + n + " 筆帳號嗎？停用後這些帳號將無法登入。"
-      : "確定要重新啟用選取的 " + n + " 筆帳號嗎？";
-    const html = '<div class="confirm-modal"><h3>' + title + '</h3><p>' + body + '</p>' +
+    let title, body, okLabel, okClass, extraHtml = "";
+    if (type === "disable") {
+      title = "批次停用帳號"; body = "確定要停用選取的 " + n + " 筆帳號嗎？停用後這些帳號將無法登入。";
+      okLabel = "停用"; okClass = "btn-primary";
+    } else if (type === "enable") {
+      title = "批次啟用帳號"; body = "確定要重新啟用選取的 " + n + " 筆帳號嗎？";
+      okLabel = "啟用"; okClass = "btn-primary";
+    } else {
+      // 刪除硬刪 vs 改停用尚待 PM 確認，跟單筆刪除同一個 TODO 提示；confirmOk 不接實際刪除，
+      // 只示意二次確認流程本身（見 openConfirm 上方註解）
+      title = "批次刪除帳號"; body = "確定要刪除選取的 " + n + " 筆帳號嗎？此操作無法復原。";
+      okLabel = "刪除"; okClass = "btn-danger";
+      extraHtml = '<div class="flag-note" style="margin-top:14px">' + icon("flag") +
+        '<div>刪除方式（硬刪除或改為停用）尚待 PM 確認，此為 UI 示意<span class="todo-tag">TODO</span></div></div>';
+    }
+    const html = '<div class="confirm-modal"><h3>' + title + '</h3><p>' + body + '</p>' + extraHtml +
       '<div class="cm-foot"><button class="btn btn-secondary" id="confirmCancel">取消</button>' +
-      '<button class="btn btn-primary" id="confirmOk">' + (type === "disable" ? "停用" : "啟用") + '</button></div></div>';
+      '<button class="btn ' + okClass + '" id="confirmOk">' + okLabel + '</button></div></div>';
     document.getElementById("orgConfirmMask").innerHTML = html;
     document.getElementById("orgConfirmMask").classList.add("open");
     document.getElementById("confirmCancel").addEventListener("click", closeConfirm);
     document.getElementById("confirmOk").addEventListener("click", function () {
-      runBulkAction(type === "disable" ? "disabled" : "active");
+      if (type === "delete") { closeConfirm(); exitBulkMode(); }
+      else runBulkAction(type === "disable" ? "disabled" : "active");
     });
   }
   function runBulkAction(newStatus) {
@@ -2389,7 +2427,14 @@
     html += '<div class="toggle-row"><div><div class="tr-label">開啟國際簡訊</div><div class="tr-sub">關閉後此帳號僅能發送台灣門號簡訊</div></div>' + toggleHtml("fIntlSms", acct ? acct.intlSms : false) + '</div>';
     html += '<div class="toggle-row"><div><div class="tr-label">啟用帳號</div><div class="tr-sub">關閉後此帳號將無法登入</div></div>' + toggleHtml("fEnabled", acct ? acct.status === "active" : true) + '</div>';
     html += '</div>';
-    html += '<div class="drawer-foot"><button class="btn btn-secondary" id="drawerCancel">取消</button><button class="btn btn-primary" id="drawerSave">' + (isEdit ? "儲存" : "建立帳號") + '</button></div>';
+    // 刪除比照「停用」的收法（列表不放，收進編輯抽屜），放在 footer 最左邊、跟右邊的
+    // 取消/儲存拉開距離（space-between），只有編輯既有帳號、且不是企業管理員（母帳號）自己時才出現
+    const canDelete = isEdit && acct.role !== "companyAdmin";
+    html += '<div class="drawer-foot">';
+    html += canDelete ? '<button class="btn-danger-text" id="drawerDelete">刪除帳號</button>' : '<span></span>';
+    html += '<div class="drawer-foot-right"><button class="btn btn-secondary" id="drawerCancel">取消</button>' +
+      '<button class="btn btn-primary" id="drawerSave">' + (isEdit ? "儲存" : "建立帳號") + '</button></div>';
+    html += '</div>';
 
     document.getElementById("orgDrawer").innerHTML = html;
     document.getElementById("orgDrawerMask").classList.add("open");
@@ -2414,6 +2459,8 @@
       });
     }
     document.getElementById("drawerSave").addEventListener("click", saveAccountFromDrawer);
+    const delBtn = document.getElementById("drawerDelete");
+    if (delBtn) delBtn.addEventListener("click", function () { openConfirm(orgState.editingId, "account"); });
   }
   function saveAccountFromDrawer() {
     clearFieldErrors();
@@ -2478,8 +2525,10 @@
   }
 
   // ---- 停用／啟用／刪除 確認框（沿用系統 Modal 定案：危險/一般確認無 ✕、footer 無分隔線） ----
-  // 2026-08-11 第二輪：列表拿掉了停用/啟用連結（改到修改抽屜的開關），這裡只剩「刪除」會走到，
-  // 批次停用/啟用另外走 openBulkConfirm()/runBulkAction()，跟這裡的單筆刪除是兩條獨立路徑
+  // 2026-08-13：帳號的單筆刪除入口從列表移進編輯抽屜（比照「停用」收法），這裡的 kind==="account"
+  // 現在只會從抽屜的「刪除帳號」按鈕觸發；批次刪除另外走 openBulkConfirm("delete")。
+  // 刪除是硬刪還是改停用還沒跟 PM 確認（見下方 TODO 提示），所以帳號這條路徑 runConfirm() 只做
+  // 二次確認 UI 本身、不真的動資料——department 分支不在這次調整範圍內，維持既有的真刪除行為
   function openConfirm(id, kind) {
     orgState.pendingConfirm = { id: id, kind: kind };
     let title, body;
@@ -2512,13 +2561,14 @@
       const name = DEPARTMENTS[idx].name;
       DEPARTMENTS.splice(idx, 1);
       showToast("已刪除部門「" + name + "」");
+      closeConfirm();
+      renderContent();
     } else {
-      const acct = ACCOUNTS.find(function (a) { return a.id === pc.id; });
-      ACCOUNTS.splice(ACCOUNTS.indexOf(acct), 1);
-      showToast("已刪除「" + acct.name + "」");
+      // 帳號刪除先不接實際行為（硬刪/改停用待 PM 確認），只示意二次確認流程：
+      // 關掉確認框，順便關掉背後還開著的編輯抽屜（刪除入口在抽屜裡），不動 ACCOUNTS 資料
+      closeConfirm();
+      closeDrawer();
     }
-    closeConfirm();
-    renderContent();
   }
 
   // ============================================================
