@@ -45,9 +45,41 @@
     --fs-body:    16px; --lh-body:    26px; /* Body・主要內文、表格內容、表單文字，介面預設 */
     --fs-small:   14px; --lh-small:   22px; /* Small・次要文字、按鈕、導覽項目 */
     --fs-caption: 13px; --lh-caption: 18px; /* Caption・標籤、表頭、輔助說明、徽章 */
+    /* 2026-08-13 新增第七階 Body Large：介於 Body(16) 與 Small(14) 之間。
+       起因是表格表頭——13(caption) 太小、14(small) 還是偏小、16(body) 會把欄寬吃掉導致
+       E-mail 換行，Alvie 逐一比較後選 15px 並決定正式收進系統。命名取尺寸語意（不叫
+       table-head）因為它未來不限於表頭。行高 24px 照級距比例（不是沿用 Small 的 22）。
+       ⚠️ Figma Text Styles 也要同步新增 `E8D/Body Large` 才算完成 */
+    --fs-body-lg: 15px; --lh-body-lg: 24px;
     --fw-regular: 400;
     --fw-medium:  500;
     --fw-bold:    700;
+    /* ===== Spacing（2026-08-13，直接對齊 Figma「E8D Sizing」collection 的 7 階）=====
+       ⚠️ 這 7 個值不是我訂的，是 Figma Foundations 早就定義好的 Spacing scale，
+       這裡只是把它搬進程式碼。**Figma 是唯一真實來源，要改階梯請先改 Figma。**
+       Figma Dev Mode 的 code syntax 是 `--e8d-spacing-*`，這個檔案沿用既有慣例
+       省略 `e8d-` 前綴（跟現有的 --radius-* 一致）；交付給工程師時要決定是否補回前綴。
+
+         xs   4px   圖示與文字間距、緊湊元素內距
+         sm   8px   小元件內距、標籤與元素間距
+         md  12px   按鈕內距、表單元素間距
+         lg  16px   卡片內距、欄位間距（常用基準）
+         xl  24px   卡片之間、區塊內間距
+         2xl 32px   主要區塊分隔、頁面內距
+         3xl 48px   頁面區段之間、大留白                                        */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 24px;
+    --spacing-2xl: 32px;
+    --spacing-3xl: 48px;
+    /* 語意層：沿用專案 color 的 primitive→semantic 分層做法，讓呼叫端讀得出「為什麼是這個距離」。
+       ⚠️ 一律指向上面的 primitive，不要在這裡寫死 px。
+       （2026-08-13 修正：這三個原本是我自己發明的 12/24/32，沒對到 Figma 既有的 7 階，已改成 alias） */
+    --space-tight: var(--spacing-md);      /* 附屬關係：批次操作列 → 它下方的表格 */
+    --space-block: var(--spacing-xl);      /* 一般區塊之間 —— 預設用這個 */
+    --space-section: var(--spacing-2xl);   /* 頁面標題區塊 → 內容，層級最大的一刀 */
     /* chart 進場動畫：時長／easing 統一由這兩個 token 控制，不要各 chart 各自寫死 */
     --chart-anim-duration: 700ms;
     --chart-anim-easing: ease-out;
@@ -330,11 +362,15 @@
   .proto-note .ico { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; color: var(--accent); }
   .proto-note b { color: var(--text); }
 
-  .page-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .page-head { display: flex; align-items: center; gap: 10px; margin-bottom: var(--space-section); flex-wrap: wrap; }
   .page-head h1 { font-size: var(--fs-display); line-height: var(--lh-display); font-weight: 700; margin: 0; text-wrap: balance; }
-  .page-sub { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); margin: 8px 0 24px; }
+  .page-sub { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); margin: 8px 0 var(--space-section); }
+  /* 標題與它自己的副標之間維持原本的 18px，不跟著放大——放大的是「標題區塊 → 內容」，
+     副標屬於標題區塊的一部分。這裡把 h1 的下距壓回 18px，讓 --space-section 只作用在
+     副標下方（沒有副標時就直接作用在 .page-head 下方，兩種情況的結果一致） */
+  .page-head:has(+ .page-sub) { margin-bottom: 18px; }
 
-  .tabbar { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 22px; flex-wrap: wrap; }
+  .tabbar { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: var(--space-block); flex-wrap: wrap; }
   .tab {
     padding: 11px 16px; font-size: var(--fs-body); color: var(--text-muted); background: none; border: none;
     border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px; white-space: nowrap;
@@ -342,8 +378,11 @@
   .tab:hover { color: var(--text); }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 
+  /* 2026-08-13：margin-top 從 -6px 改 0——這個負值會把上方標題區的 --space-section
+     吃掉 6px，害「儲值」頁（唯一 detail-note 直接接在標題下的頁面）變成 26px、
+     跟其他 14 頁的 32px 不一致 */
   .detail-note {
-    font-size: var(--fs-caption); color: var(--text-muted); margin: -6px 0 18px; max-width: 640px;
+    font-size: var(--fs-caption); color: var(--text-muted); margin: 0 0 18px; max-width: 640px;
   }
 
   .flag-note {
@@ -467,11 +506,29 @@
 
   .contract-card { background: var(--surface); border-radius: var(--radius-xl); padding: 24px; box-shadow: var(--shadow-card); }
   .contract-card h3 { font-size: var(--fs-subhead); line-height: var(--lh-subhead); font-weight: 700; margin: 0 0 6px; color: var(--text); }
-  .contract-card .cc-sub { font-size: var(--fs-caption); color: var(--text-muted); margin: 0 0 12px; }
-  .contract-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: var(--fs-caption); }
+  .contract-card .cc-sub { font-size: var(--fs-caption); color: var(--text-muted); margin: 0; }
+  /* 標題區：左邊標題＋說明句，右邊「查看完整費率」，左右各據一端不會重疊。
+     align-items: flex-start 讓連結貼齊標題那一行的上緣，不會被說明句往下拉 */
+  .cc-head-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);
+  }
+  .cc-head-row .cc-head-text { min-width: 0; }
+  /* padding 10px→8px(sm)：刪掉「計費方式」那行之後順勢把列距收緊，卡片整體變矮 */
+  .contract-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--spacing-md); padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--border); font-size: var(--fs-caption); }
   .contract-row:last-child { border-bottom: none; padding-bottom: 0; }
   .contract-row dt { margin: 0; color: var(--text-muted); }
   .contract-row dd { margin: 0; color: var(--text); font-weight: 600; text-align: right; }
+  /* 單價列的級距標籤（「1–1,000 則」）：壓成輔助灰、不加粗，
+     讓同一行右邊的價格是視覺主角。摘要卡只顯示第一級距，完整級距在詳情頁 */
+  .contract-row dd .cr-range { font-weight: 500; color: var(--text-muted); margin-right: 8px; }
+  /* 字級沿用站內文字連結按鈕 .btn-text 的規格（Body 16／600／accent），
+     原本 13px(caption) 當按鈕太小。標題是 18px，兩者一左一右不會互搶 */
+  .contract-link {
+    flex-shrink: 0; white-space: nowrap; font-size: var(--fs-body); font-weight: 600;
+    color: var(--accent); text-decoration: none; cursor: pointer; transition: color .12s ease;
+  }
+  .contract-link:hover { color: var(--accent-active); }
 
 
   .ext-card {
@@ -560,7 +617,10 @@
   .dd-item .dd-check { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
 
   /* ---- 篩選列（即時過濾，無查詢按鈕） ---- */
-  .filter-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  /* margin-bottom 2026-08-13 從寫死的 16px 改綁 --space-block（24px）：
+     查詢/操作列跟下方表格原本貼太近，且這個 16 跟其他區塊的 24／22／32 各自為政 */
+  /* gap 10→12(md)：10px 不在 4px grid 上，是這個檔案第二常見的野生數字（26 處） */
+  .filter-bar { display: flex; align-items: center; gap: var(--spacing-md); flex-wrap: wrap; margin-bottom: var(--space-block); }
   .filter-search { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
   .filter-search .ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-muted); pointer-events: none; }
   .filter-search input {
@@ -583,8 +643,9 @@
      部門膠囊排與下方工具列排原本黏在一起，分不出是兩個獨立區塊。
      這個值同時決定「膠囊→工具列」（沒選部門時）與「膠囊→主管資訊列」（有選部門時）的距離，
      `.dept-context` 的 margin-bottom 也一起改成 24，維持主管那行上下等距（Alvie 前一輪的要求）。
-     用 margin 不用 gap／固定高度，所以 chip 換行、視窗縮放時間距都不會跑掉 */
-  .dept-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+     用 margin 不用 gap／固定高度，所以 chip 換行、視窗縮放時間距都不會跑掉。
+     2026-08-13 二次調整：這個 24px 改綁 --space-block，跟其他區塊間距同一個來源 */
+  .dept-chips { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); margin-bottom: var(--space-block); }
   .dept-chip {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 7px 14px; border-radius: var(--radius-full);
@@ -602,16 +663,18 @@
   /* ---- 表格卡片 ---- */
   .table-card { background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); overflow: hidden; }
   .data-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); line-height: var(--lh-body); }
-  /* 表頭字級 2026-08-13 從 13px(caption) 調到 14px(small)——中途試過 15px，但 15 不在
-     六階字級系統裡（30/22/18/16/14/13），Alvie 決定回到系統既有的 14px，改回綁 token */
+  /* 表頭字級 2026-08-13 定案 15px：13→15→14→15→16 一路比較後，Alvie 判斷 15 跟 16 有差、
+     選 15，並決定正式收進系統成為新的一階「Body Large」（--fs-body-lg，不叫 table-head，
+     因為不限於表頭用途）。⚠️ 改這個字級一定要回頭重算欄寬（見 renderAccountsList 的欄寬註解） */
   .data-table th {
-    text-align: left; font-size: var(--fs-small); font-weight: 700; color: var(--text-muted); text-transform: uppercase;
-    letter-spacing: .03em; padding: 12px 16px; border-bottom: 1px solid var(--border);
+    text-align: left; font-size: var(--fs-body-lg); line-height: var(--lh-body-lg); font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: .03em; padding: var(--spacing-md) var(--spacing-lg); border-bottom: 1px solid var(--border);
   }
   /* 2026-08-13：欄位變窄後 nowrap 表頭會橫向溢出、疊到隔壁欄標題（例如「所屬部門」疊到「角色」），
      改回允許換行——表頭折成兩行是常見、可接受的作法，跟本體資料換行是分開的兩件事 */
   .acct-table th, .dept-table th { white-space: normal; }
-  .data-table td { padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  /* 13px→12px(md)：13 是野生值，跟表頭的 12 差 1px 也沒有意義，一起收進 md */
+  .data-table td { padding: var(--spacing-md) var(--spacing-lg); border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
   .data-table tr:last-child td { border-bottom: none; }
   /* 2026-08-11：hover 只給「整列可互動」的表格（帳號、部門），讀唯讀表格（權限總覽）不套 .is-interactive
      不會有 hover，避免使用者誤以為能點。色值照 Figma Table Row 元件的 Hover 狀態＝var(--bg)，
@@ -639,21 +702,120 @@
   .badge-dot.is-disabled { background: var(--surface-2); color: var(--text-muted); }
   .badge-dot.is-disabled .dot { background: var(--text-disabled); }
 
+  /* ---- 操作紀錄（Audit Log），2026-08-13 新增 ----
+     跟帳號表刻意的兩個差異：
+     ① 不掛 .is-interactive —— 這是唯讀稽核表、沒有列操作，有 hover 會誤導成可點
+     ② 沒有任何欄位承載個資 —— 操作者與對象一律只放帳號代號，姓名／手機／信箱都不進這張表 */
+  .audit-table { min-width: 900px; }
+  /* ⚠️ 掛在 <td> 上的 class 一定要寫成 .data-table td.xxx —— 共用規則
+     `.data-table td { color: var(--text) }` 特異度(0,1,1)贏過單純的 class(0,1,0)，
+     只寫 class 的話灰字會被打回深色（第一版就是這樣，量出來是 #2C2324 才發現） */
+  /* 2026-08-13 字級對齊子帳號管理表（Alvie 裁示，不自己另立一套）：
+       表頭      → 兩表共用 .data-table th（Small 14/700），維持不動
+       資料內文  → Body 16（時間、操作者、類別、動作、對象全部走 .data-table 預設）
+       次要說明  → 只有「說明」欄降一階用 Small 14
+     時間欄只保留 tabular-nums 與 nowrap（稽核表最基本的欄，折行整列會多一截、
+     掃讀時間軸也變吃力），顏色沿用帳號表次要識別欄的 .muted 灰。 */
+  .data-table td.audit-time { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text-muted); }
+  /* 粗體給「操作者」與「動作」兩欄（2026-08-13 Alvie 裁示）。
+     帳號表的模式是整列只有姓名一欄加粗，這裡刻意不同——稽核列要掃讀的是
+     「誰 做了什麼」，兩個都是主體，只強調其一反而讀不出重點。字重仍是既有的 600，
+     沒有新增字重階，差異只在「哪些欄位套用」。 */
+  .audit-id { font-weight: 600; }
+  .data-table td.audit-desc { color: var(--text-muted); font-size: var(--fs-small); line-height: var(--lh-small); }
+  /* 類別欄刻意不上色：四個類別各配一個顏色等於發明四種不存在的語意，紅色也會被誤讀成危險 */
+  .audit-act { display: inline-flex; align-items: baseline; gap: 7px; font-weight: 600; color: var(--text); }
+  .audit-act .alert-dot { width: 6px; height: 6px; border-radius: 50%; background: #EC2D30; flex-shrink: 0; position: relative; top: -2px; }
+  .audit-dash { color: var(--text-disabled); }
+  /* 保存期限：這是產品規格不是待辦，所以用中性小字放表格下方當註腳，
+     不跟上方黃色的 .flag-note（待正式開發）混在一起，兩者性質不同 */
+  /* ---- 分頁列：規格直接讀自 Figma「E8D · Pagination」（node 248:117）----
+     頁碼 32×32、圓角 radius-md、字 13px(caption)/Medium 500、item 間距 spacing-xs(4px)、
+     Default 灰字無底／Hover 灰底(bg/hover)深字／Active 橘底白字／Disabled 淡灰／Ellipsis 靜態不可點。
+     版面 space-between：左邊每頁筆數選單＋筆數摘要，右邊 pager。
+     放在表格卡片內底部並用 border-top 分隔（表格最後一列本來就沒有底線，接得剛好）。 */
+  .pager-bar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    gap: var(--spacing-md); padding: var(--spacing-md) var(--spacing-lg);
+    border-top: 1px solid var(--border);
+  }
+  .pager-left { display: flex; align-items: center; gap: var(--spacing-xl); flex-wrap: wrap; }
+  .page-size { display: flex; align-items: center; gap: var(--spacing-sm); font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); white-space: nowrap; }
+  .page-size .dd { width: 88px; }
+  .pager-info { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pager { display: flex; align-items: center; gap: var(--spacing-xs); }
+  .pager-item {
+    width: 32px; height: 32px; padding: 0; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; background: none; border-radius: var(--radius-md); cursor: pointer;
+    font-family: var(--font-ui); font-size: var(--fs-caption); line-height: 20px; font-weight: 500;
+    color: var(--text-muted); font-variant-numeric: tabular-nums;
+    transition: background .12s ease, color .12s ease;
+  }
+  .pager-item .ico { width: 16px; height: 16px; }
+  .pager-item:hover:not(:disabled):not(.active) { background: var(--bg); color: var(--text); }
+  .pager-item.active { background: var(--accent); color: var(--accent-contrast); cursor: default; }
+  .pager-item:disabled { color: var(--text-disabled); cursor: not-allowed; }
+  /* Ellipsis 是靜態指示不是按鈕，用 span 不用 button —— 沒有 hover、也不該被鍵盤 tab 到 */
+  .pager-gap { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-disabled); font-size: var(--fs-caption); }
+
+  /* 2026-08-13：字級從 Caption 提高一階到 Small（Alvie：這是合規／個資說明，要被看到）。
+     顏色維持次要灰不變深——提高的是可讀性，不是把它變成跟資料同級的主角。
+     icon 跟著字級走：14px 對 Caption、16px 對 Small */
+  .audit-retention { display: flex; align-items: center; gap: 6px; margin-top: var(--spacing-md); font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); }
+  .audit-retention .ico { width: 16px; height: 16px; color: var(--text-disabled); flex-shrink: 0; }
+  /* 筆數摘要：語意上是「篩選後的結果數」，所以就放在篩選列這一排的最右側。
+     （2026-08-13 曾搬進表格卡片左上角，但那裡跟表頭之間會空出一段，看起來像沒有歸屬的孤字，已移回）
+     靠右靠的是前面的 .filter-bar-spacer(flex:1)；再加一個 --spacing-xl 的 margin-left 保底，
+     這樣就算視窗窄到 spacer 被壓扁，也不會貼上「時間範圍」下拉、被誤讀成綁在一起的附屬文字。
+     垂直方向由 .filter-bar 既有的 align-items:center 處理，跟搜尋框、下拉同一條中線。 */
+  .filter-count {
+    margin-left: var(--spacing-xl);
+    font-size: var(--fs-small); line-height: var(--lh-small);
+    color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+
+  /* ---- 部門頁：主管儲存格（名字＋指派連結）---- */
+  .manager-cell { display: inline-flex; align-items: center; gap: var(--spacing-sm); }
+
+  /* ---- 部門頁：刪除被停用時的就地說明（2026-08-14 第二版）----
+     第一版放在表格最底部一條常駐訊息，位置跟 hover 的那一列對不起來（滑到哪一列都在同一個地方，
+     看起來就像寫死的固定文字）。改成 hover 哪一列，就在**那一列正下方**插入一列說明，
+     文字帶入該列自己的帳號數，滑走就移除。
+     不用 tooltip：① 專案不走 tooltip 這條路 ② disabled 的 <button> 不會發出滑鼠事件，
+     hover 監聽必須掛在外層的 td.col-actions 上才收得到。
+     底色用 var(--bg)（跟表格列 hover 同一個色），讓說明在視覺上跟它所屬的那一列是一組。 */
+  .dept-note-row > td { background: var(--bg); padding: 10px var(--spacing-lg); }
+  .dept-note-inner { display: flex; align-items: flex-start; gap: 6px; font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); }
+  .dept-note-inner .ico { width: 16px; height: 16px; color: var(--text-disabled); flex-shrink: 0; margin-top: 3px; }
+
   /* ---- 部門情境列（點選部門樹後，列表上方顯示部門名稱＋主管） ---- */
   /* 2026-08-13：margin-top 從 -4px 改 0——上方 chip 列的 margin-bottom 會被 -4px 抵銷，
      看起來就會偏向黏著上面那排 chip。現在上下一致（都是 24px，跟 .dept-chips 同一組數值） */
-  .dept-context { display: flex; align-items: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; color: var(--text); margin: 0 0 24px; }
+  .dept-context { display: flex; align-items: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; color: var(--text); margin: 0 0 var(--space-block); }
   .dept-context .ico { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
 
   /* ---- 批次操作：選取模式列首 checkbox／浮出的操作列（checkbox 樣式見 .chk，跟系統元件同一套）---- */
   /* 欄寬改由表頭 th 的 inline % 決定（table-layout:fixed 只吃第一列的寬度），這裡不寫死 px */
+  /* 2026-08-13：`.chk` 是 inline-flex，屬於行內元素、預設沿「文字基線」對齊，
+     所以在表頭那列會比旁邊的欄位標題高約 4px（實測）。補 vertical-align: middle
+     讓它改用儲存格的垂直中線對齊。
+     ⚠️ 不要改成在 td/th 上加 display:flex —— 那會讓儲存格脫離表格排版、不再參與欄寬計算 */
   .data-table td.col-check, .data-table th.col-check { padding-right: 0; }
+  .data-table td.col-check .chk, .data-table th.col-check .chk { vertical-align: middle; }
+  /* 這條刻意用 --space-tight（12px）而不是 --space-block：批次操作列是「附屬於下方表格」
+     的工具列（已選 N 筆＋對這些列的操作），貼近表格才讀得出兩者是一組。
+     若之後覺得不夠透氣，改綁 --space-block 即可，不要再寫死數字 */
+  /* gap 12→16(lg)、padding 10/14→12/16(md/lg)：原本四顆按鈕全部等距 12px 擠在一起，
+     而且「批次停用/啟用/刪除」（三個操作）跟「取消」（離開選取模式）性質不同卻同距離，
+     讀起來是平均的四顆。現在按鈕之間 lg，「取消」前面另外加一段 xl 把它跟操作群分開 */
   .bulk-bar {
-    display: flex; align-items: center; gap: 12px; background: var(--accent-soft);
-    border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: var(--spacing-lg); background: var(--accent-soft);
+    border-radius: var(--radius-md); padding: var(--spacing-md) var(--spacing-lg); margin-bottom: var(--space-tight);
   }
   .bulk-bar .bb-count { font-size: var(--fs-caption); font-weight: 700; color: var(--accent); white-space: nowrap; }
   .bulk-bar-spacer { flex: 1; }
+  .bulk-bar #btnBulkCancel { margin-left: var(--spacing-sm); }
 
   /* ---- 空狀態 ---- */
   .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 64px 24px; }
@@ -683,14 +845,14 @@
      仍照百分比伸展填滿，行為不變 */
   .table-scroll { overflow-x: auto; }
   .acct-table { min-width: 850px; }
-  .data-table.acct-table, .data-table.dept-table { table-layout: fixed; }
+  .data-table.acct-table, .data-table.dept-table, .data-table.audit-table { table-layout: fixed; }
   .data-table td.wrap-cell { overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
   /* 窄桌機（~1280）：內容區只剩約 936px、比單行所需的 1078px 少 142px。
      與其讓每一欄都被壓到換行，改成把 cell 左右 padding 從 16px 收到 12px
      （9 欄共省 72px），剩下的差額由 E-mail 欄吸收、換成兩行——
      這是刻意的取捨：短欄位優先保持單行，最長的 E-mail 才換行 */
   @media (max-width: 1366px) {
-    .acct-table th, .acct-table td { padding-left: 12px; padding-right: 12px; }
+    .acct-table th, .acct-table td { padding-left: var(--spacing-md); padding-right: var(--spacing-md); }
   }
 
   /* ---- Tooltip：系統缺口，這裡先在原型定案方向（深底白字，跟 popover/dd-panel 的白底
@@ -820,6 +982,45 @@
   .confirm-modal .cm-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
   .confirm-modal .field-group { margin: 16px 0 0; }
 
+  /* ---- 匯入帳號 modal（2026-08-13）----
+     沿用 .confirm-mask 當遮罩、.confirm-modal 當卡片，只加一個加寬的 modifier
+     跟內部元素，不另外做一套 modal。上傳區的虛線框沿用 .placeholder-card 的語言
+     （dashed border + radius-lg），沒有發明新的圓角/陰影階 */
+  .confirm-modal.is-wide { width: 480px; }
+  .confirm-modal .cm-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .confirm-modal .cm-head h3 { margin: 0; }
+  .dropzone {
+    border: 1.5px dashed var(--border); border-radius: var(--radius-lg); background: var(--bg);
+    padding: 26px 20px; text-align: center; margin-top: 16px;
+    transition: border-color .12s ease, background .12s ease;
+  }
+  .dropzone.is-over { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone > .ico { width: 30px; height: 30px; color: var(--text-disabled); margin-bottom: 10px; }
+  .dropzone .dz-hint { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 10px; }
+  /* 已選檔案列：檔名 + 移除，用淺灰底跟未選檔的虛線框做出「已完成一步」的區別 */
+  .file-row {
+    display: flex; align-items: center; gap: 10px; margin-top: 16px;
+    padding: 12px 14px; border-radius: var(--radius-md); background: var(--bg); border: 1px solid var(--border);
+  }
+  .file-row > .ico { width: 20px; height: 20px; color: var(--accent); flex-shrink: 0; }
+  .file-row .fr-name { flex: 1; min-width: 0; font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text); overflow-wrap: anywhere; }
+  .file-row .fr-size { font-size: var(--fs-caption); color: var(--text-muted); flex-shrink: 0; }
+  .file-row button {
+    width: 28px; height: 28px; border-radius: var(--radius-md); border: none; background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: var(--text-muted); flex-shrink: 0;
+  }
+  .file-row button:hover { background: var(--surface-2); color: var(--text); }
+  .file-row button .ico { width: 15px; height: 15px; }
+  /* 匯入結果：成功／失敗兩個數字並排，成功綠、失敗紅，用既有的 success/error 色 */
+  .import-result { display: flex; gap: 10px; margin-top: 16px; }
+  .import-result .ir-cell {
+    flex: 1; padding: 14px; border-radius: var(--radius-md); background: var(--bg); border: 1px solid var(--border); text-align: center;
+  }
+  .import-result .ir-num { font-size: var(--fs-heading); line-height: var(--lh-heading); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .import-result .ir-label { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 2px; }
+  .import-result .ir-cell.ok .ir-num { color: #0C9D61; }
+  .import-result .ir-cell.fail .ir-num { color: #EC2D30; }
+
   /* ---- 部門頁：inline 改名／指派主管 ---- */
   .inline-edit { display: flex; align-items: center; gap: 6px; }
   .inline-edit input {
@@ -848,7 +1049,11 @@
     position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60;
     display: flex; align-items: center; gap: 4px; padding: 8px 10px;
     border-radius: var(--radius-full); background: rgba(44,35,36,.92); backdrop-filter: blur(8px);
-    box-shadow: var(--shadow-lg); max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center;
+    box-shadow: var(--shadow-lg);
+    /* width: max-content 修正一個 flex-wrap + fixed 定位的瀏覽器怪癖：
+       不設的話 shrink-to-fit 算出來的寬度會比實際內容單行需要的寬度小一截，
+       明明 1440 螢幕裝得下整條，卻在最後一顆按鈕提早換行 */
+    width: max-content; max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center;
   }
   .demo-role-bar .drb-tag { font-size: var(--fs-caption); color: rgba(255,255,255,.55); padding: 0 6px; white-space: nowrap; letter-spacing: .2px; }
   .demo-role-bar button {
@@ -858,6 +1063,8 @@
   }
   .demo-role-bar button:hover { background: rgba(255,255,255,.10); color: #fff; }
   .demo-role-bar button.active { background: var(--accent); color: #fff; }
+  /* 兩組 demo 控制項（身份／合約狀態）中間的視覺分隔線——兩組各切各的，互不影響 */
+  .demo-role-bar .drb-divider { width: 1px; height: 20px; background: rgba(255,255,255,.18); flex-shrink: 0; margin: 0 2px; }
 
   /* 2026-08-13：原本這裡是把 .org-shell 的左右並排在窄螢幕改成上下堆疊；
      部門樹改成 chip 列後本來就是橫向、自己會 flex-wrap 折行，不需要斷點處理 */
@@ -1006,6 +1213,10 @@
   <button data-demo-role="companyAdmin">企業管理員</button>
   <button data-demo-role="deptManager">部門管理員</button>
   <button data-demo-role="user">一般使用者</button>
+  <span class="drb-divider" aria-hidden="true"></span>
+  <span class="drb-tag">合約狀態</span>
+  <button data-demo-contract="yes">有合約</button>
+  <button data-demo-contract="no">無合約（牌價）</button>
 </div>
 
 <script src="country-codes.js"></script>
@@ -1070,7 +1281,20 @@
     check: '<path d="M20 6 9 17l-5-5"/>',
     circleAlert: '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><path d="M12 16h.01"/>',
     idCard: '<path d="M16 10h2"/><path d="M16 14h2"/><path d="M6.17 15a3 3 0 0 1 5.66 0"/><circle cx="9" cy="11" r="2"/><rect x="2" y="5" width="20" height="14" rx="2"/>',
-    minus: '<path d="M5 12h14"/>'
+    minus: '<path d="M5 12h14"/>',
+    // 2026-08-13 匯入功能新增（Lucide upload／download／file-spreadsheet，viewBox 24 stroke 2）
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+    fileSheet: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/>',
+    // 2026-08-13 操作紀錄頁新增（Lucide history），用在空狀態與保存期限註腳
+    history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+    /* 2026-08-13 分頁列新增（Lucide chevron-left／chevrons-left／chevrons-right）。
+       Figma 的 Pagination Item 用的是自畫的細箭頭 vector，這裡改用 Lucide 同義圖示——
+       全站 icon 2026-07-28 已統一 Lucide（viewBox 24 / stroke 2），為了分頁另外引一組
+       外觀不同的箭頭反而會破壞一致性。形狀語意完全對應：‹ › 單箭頭、« » 雙箭頭 */
+    chevLeft: '<path d="m15 18-6-6 6-6"/>',
+    chevsLeft: '<path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/>',
+    chevsRight: '<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>'
   };
   function icon(name, extra) {
     // 2026-07-31 修正：extra 若帶 class="..."，原本會跟下面固定寫死的 class="ico"
@@ -1120,7 +1344,10 @@
     // 渲染，renderContent() 裡對 topItem.id === "org" 另外分流到專用渲染器。
     { id: "org", label: "組織與子帳號", kind: "group", icon: "org", children: [
       { id: "org-accounts", label: "子帳號管理" },
-      { id: "org-departments", label: "部門" }
+      { id: "org-departments", label: "部門" },
+      // 2026-08-13 新增：操作紀錄（Audit Log）。access 是三級裡最嚴的 companyAdmin——
+      // 稽核紀錄會揭露「誰對誰做了什麼」，部門管理員看得到就等於看得到別部門的動作
+      { id: "org-audit", label: "操作紀錄" }
     ]},
     { id: "settings", label: "設定", kind: "group", icon: "gear", children: [
       { id: "account-settings", label: "帳戶設定", tabs: ["公司資訊", "預約發送代表號", "個人資料", "密碼"] },
@@ -1151,11 +1378,27 @@
       sms: [300, 330, 310, 340, 360, 370, 410],
       mms: [80, 80, 85, 90, 95, 100, 110]
     },
-    contract: [
-      { label: "簡訊單價（SMS）", value: "NT$0.8 / 則" },
-      { label: "多媒體簡訊單價（MMS）", value: "NT$3.5 / 則" },
-      { label: "合約期間", value: "2026/01/01–2026/12/31" }
-    ]
+    /* 合約狀態兩版（2026-08-14）：demo 假費率，實際數字待 PM 提供。
+       摘要卡**只顯示第一級距**一種價格，完整級距放帳務與點數的合約詳情頁
+       （底部「查看完整費率」進去看）。原本把所有級距列出來太擠，
+       而且未來若變成三、四級距這張卡會撐爆，所以摘要一律只給起始價。 */
+    contract: {
+      yes: {
+        sub: "已簽約合約價，SMS／MMS 皆依用量分級距計價",
+        rows: [
+          { label: "簡訊單價（SMS）", range: "1–1,000 則", value: "NT$0.85／則" },
+          { label: "多媒體簡訊單價（MMS）", range: "1–1,000 則", value: "NT$3.5／則" },
+          { label: "合約期間", value: "2026/01/01–2026/12/31" }
+        ]
+      },
+      no: {
+        sub: "未簽約，依現行牌價，SMS／MMS 皆依用量分級距計價",
+        rows: [
+          { label: "簡訊單價（SMS）", range: "1–1,000 則", value: "NT$0.95／則" },
+          { label: "多媒體簡訊單價（MMS）", range: "1–1,000 則", value: "NT$3.8／則" }
+        ]
+      }
+    }
   };
 
   /* ============================================================
@@ -1173,7 +1416,10 @@
      帳號抽屜的「此身份可用功能」預覽。「公司層級設定」Alvie 不確定那是什麼，拿掉；
      「權限總覽」項目也一併移除（頁面已不存在）。
      Phase 2 規劃中的功能（帳單與帳務／訂閱方案／發票管理，對照 NAV 的 phase2 標記）維持不列。
-     access 只有 "all"（三身份皆可）跟 "admin"（僅企業/部門管理員）兩種。 */
+     access 三級（2026-08-13 從兩級擴充）：
+       "all"          三身份皆可
+       "admin"        僅企業／部門管理員（原本的 admin 語意不變）
+       "companyAdmin" 只有企業管理員，部門管理員也看不到 ← 為「操作紀錄」新增的一級 */
   const PERM_MATRIX = [
     { category: "總覽", items: [
       { label: "總覽", access: "all" }
@@ -1197,7 +1443,8 @@
     ]},
     { category: "組織與子帳號", items: [
       { label: "子帳號管理", access: "admin" },
-      { label: "部門", access: "admin" }
+      { label: "部門", access: "admin" },
+      { label: "操作紀錄", access: "companyAdmin" }
     ]},
     { category: "設定", items: [
       // 2026-08-12：Alvie 確認三個角色都能用「設定」，從 admin 改回 all（原本推測公司層級設定
@@ -1210,8 +1457,15 @@
   function allPermItems() {
     return PERM_MATRIX.reduce(function (acc, g) { return acc.concat(g.items); }, []);
   }
+  // access 三級 × 三身份的唯一判斷點：側欄可見性（isChildVisible）與帳號抽屜的
+  // 「此身份可用功能」預覽（featuresForRole）都走這裡，兩處不會再各寫一份而對不上
+  function canAccess(access, role) {
+    if (access === "all") return true;
+    if (access === "companyAdmin") return role === "companyAdmin";
+    return role !== "user"; // "admin"＝企業＋部門管理員
+  }
   function featuresForRole(role) {
-    return allPermItems().filter(function (item) { return item.access === "all" || role !== "user"; }).map(function (item) { return item.label; });
+    return allPermItems().filter(function (item) { return canAccess(item.access, role); }).map(function (item) { return item.label; });
   }
 
   const DEPARTMENTS = [
@@ -1257,7 +1511,9 @@
   // 帳號頁篩選/抽屜/確認框共用的 UI 狀態（跟 NAV 導覽的 state 分開，避免混在一起）
   const orgState = {
     search: "", deptFilter: "all", roleFilter: "all", statusFilter: "all", editingId: null, pendingConfirm: null,
-    bulkMode: false, selectedIds: new Set()
+    bulkMode: false, selectedIds: new Set(),
+    // 匯入 modal 的兩個狀態：選到的檔案（只存檔名與大小，不解析內容）、是否已按下匯入
+    importFile: null, importDone: false
   };
 
   // ---- 儀表板圖表：手刻 SVG（零外部依賴），色彩已用 dataviz skill 的驗證腳本跑過 CVD 檢查 ----
@@ -1499,14 +1755,31 @@
       return '<button data-period="' + p.key + '" class="' + (p.key === "month" ? "active" : "") + '">' + p.label + "</button>";
     }).join("");
 
-    const contractRows = DASH.contract.map(function (c) {
-      return '<div class="contract-row"><dt>' + c.label + "</dt><dd>" + c.value + "</dd></div>";
-    }).join("");
+    // 合約摘要卡僅企業管理員可見（2026-08-14 補上這個 gating，
+    // 之前程式碼漏了這條，三種身份都看得到，跟合約狀態 demo 切換的設計前提對不上）
+    let contractCardHTML = "";
+    if (state.demoRole === "companyAdmin") {
+      const hasContract = state.demoContract === "yes";
+      const cData = hasContract ? DASH.contract.yes : DASH.contract.no;
+      // 有 range 的列＝單價，級距標在價格左邊、同一行右對齊（摘要只給第一級距）
+      const contractRows = cData.rows.map(function (c) {
+        const val = (c.range ? '<span class="cr-range">' + c.range + "</span>" : "") + c.value;
+        return '<div class="contract-row"><dt>' + c.label + "</dt><dd>" + val + "</dd></div>";
+      }).join("");
+      const title = hasContract ? "合約摘要" : "費率摘要";
+      // 「查看完整費率」移到卡片右上角，跟標題左右分開站（space-between），不會撞在一起
+      contractCardHTML = '<div class="contract-card span-6">' +
+        '<div class="cc-head-row">' +
+          '<div class="cc-head-text"><h3>' + title + '</h3>' +
+          '<div class="cc-sub">' + cData.sub + '</div></div>' +
+          '<a class="contract-link" href="#">查看完整費率 →</a>' +
+        "</div>" + contractRows + "</div>";
+    }
 
     return '<div class="page-head"><h1>總覽</h1></div>' +
       '<div class="dash-grid">' +
         stats +
-        '<div class="contract-card span-6"><h3>合約摘要</h3><div class="cc-sub">目前僅支援儲值制</div>' + contractRows + "</div>" +
+        contractCardHTML +
         '<div class="chart-card span-6"><div class="cc-head">' +
           '<div><h3>發送趨勢</h3><div class="cc-sub">SMS + MMS 合計發送量</div></div>' +
           '<div class="chart-period-tabs" id="periodTabs">' + periodTabs + "</div></div>" +
@@ -1558,7 +1831,7 @@
     renderBar(true);   // 只有首次載入要跑進場動畫（目前長條圖沒有會重建它的互動，先備著跟趨勢圖同一套規則）
   }
 
-  const state = { activeTop: "overview", activeChildId: null, activeTabIndex: 0, expandedGroup: null, demoRole: "companyAdmin" };
+  const state = { activeTop: "overview", activeChildId: null, activeTabIndex: 0, expandedGroup: null, demoRole: "companyAdmin", demoContract: "yes" };
 
   function findChild(group, childId) {
     return (group.children || []).find(function (c) { return c.id === childId; });
@@ -1579,7 +1852,7 @@
     return "all"; // PERM_MATRIX 沒定義的項目（如設定頁底下的分頁）維持現況全開，不在這次範圍內
   }
   function isChildVisible(child) {
-    return itemAccess(child.label) !== "admin" || state.demoRole !== "user";
+    return canAccess(itemAccess(child.label), state.demoRole);
   }
   function visibleChildren(group) {
     return (group.children || []).filter(isChildVisible);
@@ -2057,10 +2330,12 @@
   // ---- 頂層分流 ----
   function renderOrgHTML(childId) {
     if (childId === "org-departments") return renderDepartmentsPage();
+    if (childId === "org-audit") return renderAuditPage();
     return renderAccountsPage();
   }
   function wireOrgPage(childId) {
     if (childId === "org-departments") { wireDepartmentsPage(); return; }
+    if (childId === "org-audit") { wireAuditPage(); return; }
     wireAccountsPage();
   }
 
@@ -2098,6 +2373,11 @@
     });
     html += '<div class="filter-bar-spacer"></div>';
     if (!orgState.bulkMode) html += '<button class="btn btn-secondary" id="btnBulkToggle">批次操作</button>';
+    // 匯入放在「新增帳號」左邊：兩者都是「產生帳號」的入口，但匯入是次要路徑（一次多筆、
+    // 少用），所以用 secondary；主要按鈕維持只有「新增帳號」一顆橘色，不搶焦點。
+    // icon 用 download（托盤＋箭頭向下）不是 upload（箭頭向上）——對使用者來說「匯入」是
+    // 把資料帶進系統，箭頭向下才符合方向感（2026-08-13 Alvie 指定）
+    html += '<button class="btn btn-secondary" id="btnImport">' + icon("download") + '匯入</button>';
     html += '<button class="btn btn-primary" id="btnNewAccount">' + icon("plus") + '新增帳號</button>';
     html += '</div>';
     return html;
@@ -2185,13 +2465,14 @@
     // 1096 剛好跨過門檻，所以這組比例是「每欄 = 實測內容最大值 + 32px padding」直接換算，
     // 不是憑感覺調的。多出來的 18px 全給 E-mail（最可能出現更長的真實值）。
     //   內容實測(px)：狀態58 姓名49 帳號89 部門98 角色82 員編51 手機132 信箱197 操作34
-    //   表頭實測(px)：狀態58 姓名29 帳號29 部門58 角色29 員編58 手機29  信箱55  操作29（表頭 14px）
+    //   表頭實測(px)：狀態62 姓名31 帳號31 部門62 角色31 員編62 手機31  信箱58  操作31（表頭 15px）
     //   ⚠️ 每欄取「內容」與「表頭」兩者的**較大值**再 +32 padding。第一版只看內容寬度，
     //      員工編號因此只拿到 83px（內容 51+32），但表頭「員工編號」四個字要 54px，
     //      結果表頭自己換行——欄寬校正一定要把表頭一起算進去。
-    //      表頭字級後來從 13px 調到 14px（見 .data-table th 的註解），表頭需求整批變寬，
-    //      員編這欄因此改由「表頭」決定寬度（58 > 內容的 51）；狀態欄兩者剛好都是 58。
-    //   配置(px)：    90    81    121   130   114   90    164    240     66  = 1096
+    //      ⚠️ 表頭字級比較過 13/14/15/16，**每次改都要回來重算這組數字**。定案 15px：
+    //      狀態(62>58)與員編(62>51)兩欄改由「表頭」決定寬度，各需 94px。
+    //      （16px 試過但放棄：表頭再寬 8px 會把 E-mail 擠到 3 筆換行，總需求超出 5px）
+    //   配置(px)：    94    81    121   130   114   94    164    232     66  = 1096
     // 極端值那列（Alexander／UAE 門號／TECH-2024-0012）仍會換行，是刻意的例外。
     // 批次模式多一欄 checkbox（4%），這 4% 全部從 E-mail 的餘裕扣，其他欄維持不變，
     // 避免動到已經零餘裕的狀態/手機欄。
@@ -2204,11 +2485,11 @@
     const W = narrow
       ? (bulkMode
         // 936px／padding 24：短欄位 = max(內容, 表頭) + 24，餘額給 E-mail；批次的 4% 一樣從 E-mail 扣
-        ? { check: 4, status: 8.76, name: 7.80, account: 12.07, dept: 13.03, role: 11.32, empNo: 8.76, phone: 16.67, email: 11.38, actions: 6.20 }
-        : { status: 8.76, name: 7.80, account: 12.07, dept: 13.03, role: 11.32, empNo: 8.76, phone: 16.67, email: 15.38, actions: 6.20 })
+        ? { check: 4, status: 9.19, name: 7.80, account: 12.07, dept: 13.03, role: 11.32, empNo: 9.19, phone: 16.67, email: 10.53, actions: 6.20 }
+        : { status: 9.19, name: 7.80, account: 12.07, dept: 13.03, role: 11.32, empNo: 9.19, phone: 16.67, email: 14.53, actions: 6.20 })
       : (bulkMode
-        ? { check: 4, status: 8.21, name: 7.39, account: 11.04, dept: 11.86, role: 10.40, empNo: 8.21, phone: 14.96, email: 17.90, actions: 6.02 }
-        : { status: 8.21, name: 7.39, account: 11.04, dept: 11.86, role: 10.40, empNo: 8.21, phone: 14.96, email: 21.90, actions: 6.02 });
+        ? { check: 4, status: 8.58, name: 7.39, account: 11.04, dept: 11.86, role: 10.40, empNo: 8.58, phone: 14.96, email: 17.17, actions: 6.02 }
+        : { status: 8.58, name: 7.39, account: 11.04, dept: 11.86, role: 10.40, empNo: 8.58, phone: 14.96, email: 21.17, actions: 6.02 });
     const checkHeadCell = bulkMode ? '<th class="col-check" style="width:' + W.check + '%">' + checkboxHtml(' id="selectAllChk"', false) + '</th>' : "";
     return '<div class="table-card"><div class="table-scroll"><table class="data-table is-interactive acct-table"><thead><tr>' + checkHeadCell +
       '<th style="width:' + W.status + '%">帳號狀態</th><th style="width:' + W.name + '%">姓名</th><th style="width:' + W.account + '%">帳號</th>' +
@@ -2416,7 +2697,143 @@
     if (btnNew) btnNew.addEventListener("click", function () { openAccountDrawer(null); });
     const btnBulk = document.getElementById("btnBulkToggle");
     if (btnBulk) btnBulk.addEventListener("click", enterBulkMode);
+    const btnImport = document.getElementById("btnImport");
+    if (btnImport) btnImport.addEventListener("click", openImportModal);
     wireBulkBar();
+  }
+
+  // ============================================================
+  // 匯入帳號（2026-08-13）
+  // ------------------------------------------------------------
+  // ⚠️ 這整段是**行為示意**：檔案不會真的被解析，匯入結果是寫死的示意數字。
+  // 實際的檔案解析／格式驗證／逐列錯誤回報屬於正式開發範圍。
+  //
+  // 範例檔欄位（依 Alvie 2026-08-13 裁示，以舊站 account_import.xls 為基礎調整）：
+  //   帳號＊／密碼＊／員工部門＊／員工姓名＊／員工編號／行動電話／電子信箱＊／職員身份＊
+  //   ① 職員身份代碼沿用舊檔的 0／1，但標籤換成新系統的角色名：0=一般使用者、1=部門管理員
+  //      （舊檔是 0=職員、1=主管）。企業管理員＝母帳號，不開放匯入建立
+  //   ② 電子信箱是新增欄位（舊檔沒有），新系統列為必填所以範例檔也必填
+  //   ③ 舊檔的「是否為客服部門」整欄拿掉——新架構沒有這個概念，
+  //      且舊檔自己就備註「官網暫不支援此功能」
+  //
+  // 2026-08-13：欄位清單與代碼說明原本印在 modal 裡，Alvie 判斷這些資訊範例檔本身就會寫、
+  // 印在畫面上是重複，已移除。**規格保留在上面這段註解**，之後產範例檔照這裡做。
+  // ============================================================
+
+  function renderImportBody() {
+    const f = orgState.importFile;
+    let html = '<div class="cm-head"><h3>匯入帳號</h3>' +
+      '<button class="drawer-close" id="importClose">' + icon("x") + '</button></div>';
+    html += '<p>上傳 Excel 檔案一次建立多筆子帳號。</p>';
+
+    if (orgState.importDone) {
+      // ---- 狀態三：匯入結果（示意數字，不是真的解析出來的）----
+      html += '<div class="import-result">' +
+        '<div class="ir-cell ok"><div class="ir-num">8</div><div class="ir-label">成功</div></div>' +
+        '<div class="ir-cell fail"><div class="ir-num">2</div><div class="ir-label">失敗</div></div>' +
+        '</div>';
+      html += '<div class="flag-note" style="margin:16px 0 0">' + icon("flag") +
+        '<div>此為行為示意，數字非實際解析結果；失敗原因逐列回報待正式開發' +
+        '<span class="todo-tag">TODO</span></div></div>';
+      html += '<div class="cm-foot"><button class="btn btn-primary" id="importDone">完成</button></div>';
+      return html;
+    }
+
+    if (f) {
+      // ---- 狀態二：已選檔案 ----
+      html += '<div class="file-row">' + icon("fileSheet") +
+        '<span class="fr-name">' + escAttr(f.name) + '</span>' +
+        '<span class="fr-size">' + f.size + '</span>' +
+        '<button id="importRemove" title="移除檔案">' + icon("x") + '</button></div>';
+    } else {
+      // ---- 狀態一：尚未選檔 ----
+      html += '<div class="dropzone" id="importDrop">' + icon("upload") +
+        '<div><button class="btn btn-secondary btn-sm" id="importPick">選擇檔案</button></div>' +
+        '<div class="dz-hint">或將檔案拖曳到這裡（支援 .xlsx／.xls）</div>' +
+        '</div>';
+    }
+    // 「下載範例檔」不掛 icon：站內的 .btn-text 文字連結（編輯／刪除／重新指派）一律無圖示，
+    // 而且這裡若用 download icon 會跟上方「匯入」按鈕的圖示完全一樣、語意反而混淆
+    html += '<div style="margin-top:14px"><button class="btn-text" id="importSample">下載範例檔</button></div>';
+    html += '<div class="flag-note" style="margin:16px 0 0">' + icon("flag") +
+      '<div>此段為行為示意，實際解析待正式開發<span class="todo-tag">TODO</span></div></div>';
+    html += '<div class="cm-foot"><button class="btn btn-secondary" id="importCancel">取消</button>' +
+      '<button class="btn btn-primary" id="importRun"' + (f ? "" : " disabled") + '>匯入</button></div>';
+    return html;
+  }
+
+  function openImportModal() {
+    orgState.importFile = null;
+    orgState.importDone = false;
+    paintImportModal();
+    document.getElementById("orgConfirmMask").classList.add("open");
+  }
+  function closeImportModal() {
+    document.getElementById("orgConfirmMask").classList.remove("open");
+    orgState.importFile = null;
+    orgState.importDone = false;
+  }
+  // 重畫 modal 內容並重新綁事件（三個狀態共用同一個節點，狀態一換就整塊重畫）
+  function paintImportModal() {
+    const mask = document.getElementById("orgConfirmMask");
+    mask.innerHTML = '<div class="confirm-modal is-wide">' + renderImportBody() + '</div>';
+    wireImportModal();
+  }
+  function wireImportModal() {
+    const close = document.getElementById("importClose");
+    if (close) close.addEventListener("click", closeImportModal);
+    const cancel = document.getElementById("importCancel");
+    if (cancel) cancel.addEventListener("click", closeImportModal);
+    const done = document.getElementById("importDone");
+    if (done) done.addEventListener("click", function () {
+      closeImportModal();
+      showToast("已匯入 8 筆帳號（示意）");
+    });
+    const remove = document.getElementById("importRemove");
+    if (remove) remove.addEventListener("click", function () {
+      orgState.importFile = null;
+      paintImportModal();
+    });
+    const run = document.getElementById("importRun");
+    if (run) run.addEventListener("click", function () {
+      if (!orgState.importFile) return;
+      orgState.importDone = true;
+      paintImportModal();
+    });
+    const sample = document.getElementById("importSample");
+    if (sample) sample.addEventListener("click", function () {
+      showToast("範例檔下載為佔位，實際檔案待正式開發");
+    });
+    // 選檔：用隱藏的 file input，真的讀使用者選的檔名／大小（不解析內容）
+    const pick = document.getElementById("importPick");
+    if (pick) pick.addEventListener("click", function () {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".xlsx,.xls";
+      input.addEventListener("change", function () {
+        if (this.files && this.files[0]) acceptImportFile(this.files[0]);
+      });
+      input.click();
+    });
+    // 拖曳：dragover 要 preventDefault，否則瀏覽器會直接開啟被拖進來的檔案
+    const drop = document.getElementById("importDrop");
+    if (drop) {
+      drop.addEventListener("dragover", function (e) { e.preventDefault(); drop.classList.add("is-over"); });
+      drop.addEventListener("dragleave", function () { drop.classList.remove("is-over"); });
+      drop.addEventListener("drop", function (e) {
+        e.preventDefault();
+        drop.classList.remove("is-over");
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) acceptImportFile(e.dataTransfer.files[0]);
+      });
+    }
+  }
+  function acceptImportFile(file) {
+    const kb = file.size / 1024;
+    orgState.importFile = {
+      name: file.name,
+      size: kb >= 1024 ? (kb / 1024).toFixed(1) + " MB" : Math.max(1, Math.round(kb)) + " KB"
+    };
+    paintImportModal();
   }
 
   // ---- 角色 → 可用功能即時預覽 ----
@@ -2633,8 +3050,12 @@
     const manager = d.managerId ? ACCOUNTS.find(function (a) { return a.id === d.managerId; }) : null;
     const label = manager ? manager.name : '<span class="muted">未指派</span>';
     if (!isAdmin) return label;
-    return '<span style="display:inline-flex;align-items:center;gap:8px">' + label +
-      '<button class="btn-text" data-assign="' + d.id + '" style="font-size:var(--fs-caption)">' + (manager ? "重新指派" : "指派") + '</button></span>';
+    /* 2026-08-14：這顆按鈕原本掛了 inline style `font-size:var(--fs-caption)`，把字級壓成 13px——
+       比同列的主管名字（16px）與右邊的「編輯／刪除」（16px）都小兩階，看起來像次等資訊。
+       inline style 已移除，改成完全繼承 .btn-text（Body 16／600／橘），跟其他操作連結一致。
+       外層的排版樣式也從 inline 收進 .manager-cell（gap 改綁 spacing token，不寫死 8px）。 */
+    return '<span class="manager-cell">' + label +
+      '<button class="btn-text" data-assign="' + d.id + '">' + (manager ? "重新指派" : "指派") + '</button></span>';
   }
   function renderDeptList() {
     const isAdmin = state.demoRole === "companyAdmin";
@@ -2642,10 +3063,16 @@
     const rows = depts.map(function (d) {
       const cnt = ACCOUNTS.filter(function (a) { return a.deptId === d.id; }).length;
       let actions = "";
+      // 刪除停用的原因改用「就地說明」呈現（見 .dept-del-note）：原本掛在 button 上的 title
+      // 屬性已拿掉——disabled 的按鈕不會觸發滑鼠事件，那個原生提示實際上多數時候根本出不來
+      let noteAttr = "";
       if (isAdmin) {
+        if (cnt > 0) {
+          noteAttr = ' data-del-note="' + escAttr("此部門尚有 " + cnt + " 個帳號，無法刪除。請先將帳號移至其他部門或刪除帳號後，再刪除此部門。") + '"';
+        }
         actions = '<div class="row-actions">' +
           '<button class="btn-text" data-edit-dept="' + d.id + '">編輯</button>' +
-          '<button class="btn-danger-text" data-del-dept="' + d.id + '"' + (cnt > 0 ? ' disabled title="部門底下還有帳號，需先搬移或停用才能刪除"' : "") + '>刪除</button>' +
+          '<button class="btn-danger-text" data-del-dept="' + d.id + '"' + (cnt > 0 ? ' disabled' : "") + '>刪除</button>' +
           '</div>';
       }
       return '<tr>' +
@@ -2653,7 +3080,7 @@
         '<td class="muted num-cell">' + d.code + '</td>' +
         '<td data-dept-manager-cell="' + d.id + '">' + renderManagerCell(d) + '</td>' +
         '<td class="num-cell muted">' + cnt + ' 人</td>' +
-        '<td class="col-actions">' + actions + '</td>' +
+        '<td class="col-actions"' + noteAttr + '>' + actions + '</td>' +
         '</tr>';
     }).join("");
     return '<div class="table-card"><div class="table-scroll"><table class="data-table is-interactive dept-table"><thead><tr>' +
@@ -2759,6 +3186,329 @@
         openConfirm(btn.getAttribute("data-del-dept"), "department");
       });
     });
+    /* 刪除停用的就地說明：hover 哪一列就在那一列正下方插一列說明，滑走移除。
+       監聽掛在操作欄（td）而不是按鈕上——disabled 的 button 不會發滑鼠事件；
+       用 mouseenter/mouseleave（不冒泡、在 td 內部移動不會誤觸發）。
+       只有帶 data-del-note 的列（帳號數 > 0）才有反應，0 人的部門滑過去完全沒事。 */
+    function clearDeptNoteRow() {
+      const old = document.querySelector(".dept-note-row");
+      if (old) old.remove();
+    }
+    document.querySelectorAll("td.col-actions[data-del-note]").forEach(function (cell) {
+      cell.addEventListener("mouseenter", function () {
+        clearDeptNoteRow(); // 從一列直接滑到另一列時，先收掉前一列的說明
+        const tr = cell.closest("tr");
+        const noteRow = document.createElement("tr");
+        noteRow.className = "dept-note-row";
+        // colspan 跟著表格欄數走，欄數改了這裡要一起改
+        noteRow.innerHTML = '<td colspan="5"><div class="dept-note-inner">' + icon("circleAlert") +
+          '<span>' + escAttr(cell.getAttribute("data-del-note")) + '</span></div></td>';
+        tr.insertAdjacentElement("afterend", noteRow);
+      });
+      cell.addEventListener("mouseleave", clearDeptNoteRow);
+    });
+  }
+
+  // ============================================================
+  // 三、操作紀錄（Audit Log）—— 唯讀稽核表，僅企業管理員可見
+  // ============================================================
+  /* 【不留個資原則】這個平台刻意不囤積個資，稽核紀錄不能變成個資後門，所以這張表：
+     ① 操作者／對象一律只放「帳號代號」（emma、ben.chen），不存也不顯示姓名／手機／信箱
+     ② 變更類事件只記「改了哪些欄位」，不記變更前後的真實值；真的要顯示就遮罩（見 a11 那筆）
+     ③ 匯出類只記「誰在何時匯出了什麼類別」，不記匯出的內容本身
+     ④ 保存期限做成下面的 config，期限到自動清除
+     維護時請守住這四條 —— 每多帶一個欄位進來，這張表就多一分變成個資清單的風險。 */
+
+  // ⚙️ 保存期限（config）：改這個數字，畫面上的說明文字會跟著變。
+  //    正式開發時這個值應該來自後端設定，不是前端寫死
+  const AUDIT_RETENTION_DAYS = 365;
+
+  // 四大類別：value 同時是篩選值與資料裡的 cat 欄位
+  const AUDIT_CATEGORIES = [
+    { value: "identity", label: "帳號與身分" },
+    { value: "permission", label: "權限異動" },
+    { value: "business", label: "核心業務" },
+    { value: "data", label: "資料操作" }
+  ];
+  function auditCatLabel(v) {
+    const hit = AUDIT_CATEGORIES.find(function (c) { return c.value === v; });
+    return hit ? hit.label : v;
+  }
+
+  /* 假資料。時間刻意用「相對現在往前推幾分鐘」（min）而不是寫死日期——
+     這樣不論哪天打開原型，「今天」「近 7 天」的區間篩選都一定篩得到東西。
+     alert:true = 失敗／鎖定類事件，動作前面會多一個紅點（整張表唯一的顏色重點）。
+     target:null = 這個動作沒有作用對象（登入、登出、匯出自己的報表）。 */
+  const AUDIT_BASE = Date.now(); // 進站當下當基準，同一次瀏覽期間時間不會跳動
+  /* 39 筆，依時間新→舊排列（`min` 由小到大）。設計原則：
+     ① 15 種動作每種至少 2 筆（登入成功／登出／登入失敗／帳號鎖定／帳號解鎖／變更密碼／重設密碼／
+        變更角色／新增子帳號／刪除子帳號／調整權限設定／儲值／扣點／匯出報表／匯出資料），
+        另含「撥點」「變更聯絡資料」兩筆額外動作（撥點是既有功能；變更聯絡資料用來示範遮罩寫法）
+     ② 四個時間區間都要有料，篩選才看得出差別：
+        今天 12 筆｜近 7 天再 +10｜近 30 天再 +10｜30–90 天 +5｜90 天以上 +2
+     ③ 每個類別都橫跨多個時間區間，所以「類別 × 時間」兩個篩選同時下也不會篩成空白
+     ④ 對象一律是帳號代號（不是部門代碼，也不是姓名）——撥點那筆的對象是收點的那個帳號 */
+  const AUDIT_LOG = [
+    // ── 今天 ──
+    { min: 8, actor: "emma", cat: "identity", action: "登入成功", target: null, desc: "來源 IP 203.0.113.xxx（末段遮罩）" },
+    { min: 26, actor: "david.lin", cat: "business", action: "扣點", target: null, desc: "簡訊發送扣點 1,280 點" },
+    { min: 46, actor: "system", cat: "identity", action: "帳號鎖定", target: "ben.chen", desc: "密碼連續錯誤達上限，系統自動鎖定", alert: true },
+    { min: 47, actor: "ben.chen", cat: "identity", action: "登入失敗", target: null, desc: "密碼錯誤（第 5 次）", alert: true },
+    { min: 95, actor: "emma", cat: "identity", action: "帳號解鎖", target: "lily.wu", desc: "客服協助解鎖" },
+    { min: 140, actor: "emma", cat: "identity", action: "重設密碼", target: "lily.wu", desc: "管理員代為重設（不記錄密碼內容）" },
+    { min: 175, actor: "emma", cat: "permission", action: "變更角色", target: "lily.wu", desc: "變更欄位：角色" },
+    { min: 220, actor: "david.lin", cat: "identity", action: "變更密碼", target: null, desc: "使用者自行變更（不記錄密碼內容）" },
+    { min: 260, actor: "emma", cat: "business", action: "儲值", target: null, desc: "50,000 點" },
+    { min: 300, actor: "emma", cat: "identity", action: "登出", target: null, desc: "使用者主動登出" },
+    { min: 330, actor: "emma", cat: "data", action: "匯出報表", target: null, desc: "管理報表 · 2026-07（不記錄匯出內容）" },
+    { min: 480, actor: "lily.wu", cat: "identity", action: "登入成功", target: null, desc: "來源 IP 198.51.100.xxx（末段遮罩）" },
+    // ── 近 7 天 ──
+    { min: 1290, actor: "lily.wu", cat: "data", action: "匯出資料", target: null, desc: "發送查詢結果（不記錄匯出內容）" },
+    { min: 1450, actor: "emma", cat: "permission", action: "調整權限設定", target: "david.lin", desc: "變更欄位：可用功能範圍" },
+    { min: 1980, actor: "emma", cat: "business", action: "撥點", target: "tina.hsu", desc: "撥點 20,000 點" },
+    { min: 2900, actor: "emma", cat: "permission", action: "變更聯絡資料", target: "david.lin", desc: "變更欄位：行動電話（09xx-xxx-347）" },
+    { min: 4320, actor: "emma", cat: "permission", action: "刪除子帳號", target: "kevin.ho", desc: "帳號已刪除，紀錄保留" },
+    { min: 5760, actor: "ben.chen", cat: "business", action: "扣點", target: null, desc: "簡訊發送扣點 640 點" },
+    { min: 7200, actor: "david.lin", cat: "data", action: "匯出報表", target: null, desc: "撥點查詢 · 2026-06（不記錄匯出內容）" },
+    { min: 8100, actor: "tina.hsu", cat: "identity", action: "登入失敗", target: null, desc: "密碼錯誤（第 2 次）", alert: true },
+    { min: 9200, actor: "david.lin", cat: "identity", action: "登出", target: null, desc: "使用者主動登出" },
+    { min: 9800, actor: "emma", cat: "permission", action: "新增子帳號", target: "tina.hsu", desc: "建立帳號並指派部門" },
+    // ── 近 30 天 ──
+    { min: 11500, actor: "lily.wu", cat: "identity", action: "變更密碼", target: null, desc: "使用者自行變更（不記錄密碼內容）" },
+    { min: 14400, actor: "emma", cat: "business", action: "儲值", target: null, desc: "30,000 點" },
+    { min: 18000, actor: "emma", cat: "data", action: "匯出資料", target: null, desc: "子帳號清單（不記錄匯出內容）" },
+    { min: 21600, actor: "system", cat: "identity", action: "帳號鎖定", target: "tina.hsu", desc: "驗證碼連續錯誤達上限，系統自動鎖定", alert: true },
+    { min: 25200, actor: "emma", cat: "identity", action: "帳號解鎖", target: "tina.hsu", desc: "客服協助解鎖" },
+    { min: 28800, actor: "emma", cat: "permission", action: "變更角色", target: "david.lin", desc: "變更欄位：角色" },
+    { min: 33000, actor: "tina.hsu", cat: "business", action: "扣點", target: null, desc: "簡訊發送扣點 320 點" },
+    { min: 37000, actor: "emma", cat: "permission", action: "新增子帳號", target: "lily.wu", desc: "建立帳號並指派部門" },
+    { min: 40000, actor: "lily.wu", cat: "data", action: "匯出報表", target: null, desc: "管理報表 · 2026-06（不記錄匯出內容）" },
+    { min: 42000, actor: "emma", cat: "identity", action: "重設密碼", target: "ben.chen", desc: "管理員代為重設（不記錄密碼內容）" },
+    // ── 30–90 天 ──
+    { min: 46080, actor: "emma", cat: "permission", action: "新增子帳號", target: "ben.chen", desc: "建立帳號並指派部門" },
+    { min: 60480, actor: "emma", cat: "business", action: "儲值", target: null, desc: "100,000 點" },
+    { min: 75000, actor: "emma", cat: "permission", action: "調整權限設定", target: "lily.wu", desc: "變更欄位：可用功能範圍" },
+    { min: 95000, actor: "david.lin", cat: "data", action: "匯出資料", target: null, desc: "發送查詢結果（不記錄匯出內容）" },
+    { min: 120000, actor: "tina.hsu", cat: "identity", action: "登入成功", target: null, desc: "來源 IP 198.51.100.xxx（末段遮罩）" },
+    // ── 90 天以上（驗證「近 90 天」與「全部時間」的差別）──
+    { min: 140000, actor: "emma", cat: "permission", action: "刪除子帳號", target: "old.chen", desc: "帳號已刪除，紀錄保留" },
+    { min: 160000, actor: "emma", cat: "identity", action: "登入成功", target: null, desc: "來源 IP 203.0.113.xxx（末段遮罩）" }
+  ];
+
+  const auditState = { search: "", cat: "all", range: "30d", page: 1, pageSize: 25 };
+  const AUDIT_PAGE_SIZES = [
+    { value: "10", label: "10" },
+    { value: "25", label: "25" },
+    { value: "50", label: "50" }
+  ];
+  // 區間選項：系統目前沒有 Date Picker 元件（設計系統缺口），所以先用既有的 Dropdown
+  // 做預設區間，不自畫日曆。之後若要精準自訂起訖日，要先決定是否擴充系統
+  const AUDIT_RANGES = [
+    { value: "today", label: "今天" },
+    { value: "7d", label: "近 7 天" },
+    { value: "30d", label: "近 30 天" },
+    { value: "90d", label: "近 90 天" },
+    { value: "all", label: "全部時間" }
+  ];
+
+  function auditTimeOf(e) { return new Date(AUDIT_BASE - e.min * 60000); }
+  function fmtAuditTime(d) {
+    const p = function (n) { return n < 10 ? "0" + n : "" + n; };
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  /* ⚠️ 前端示意篩選，正式版改後端查詢。
+     這裡是在記憶體裡的 39 筆假資料上做真實過濾（類別／時間區間／操作者三個條件同時作用，
+     筆數跟著結果即時更新），純粹為了讓 demo 點得動、看得出篩選行為。
+     正式版的稽核紀錄動輒數十萬筆，不可能整批送到前端再過濾——三個條件要當成查詢參數
+     送給後端（配合索引與分頁），前端只負責呈現回傳結果。 */
+  function filteredAudit() {
+    const kw = auditState.search.trim().toLowerCase();
+    const today = new Date(AUDIT_BASE).toDateString();
+    return AUDIT_LOG.filter(function (e) {
+      if (auditState.cat !== "all" && e.cat !== auditState.cat) return false;
+      if (auditState.range === "today") {
+        if (auditTimeOf(e).toDateString() !== today) return false;
+      } else if (auditState.range !== "all") {
+        const days = parseInt(auditState.range, 10);
+        if (e.min > days * 24 * 60) return false;
+      }
+      // 只比對操作者（規格指定）。若之後要連「對象」一起搜，改這裡加一個 or 條件即可
+      if (kw && e.actor.toLowerCase().indexOf(kw) === -1) return false;
+      return true;
+    }).sort(function (a, b) { return a.min - b.min; }); // 新 → 舊
+  }
+
+  // ---- 分頁（規格見 .pager-bar 的 CSS 註解）----
+  // 同樣是前端示意：正式版換成後端查詢後，這裡的 slice 要改成把 page/pageSize 當查詢參數送出，
+  // 由後端只回傳當頁那幾筆（稽核紀錄量大，不可能整批撈到前端再切）
+  function auditTotalPages() {
+    return Math.max(1, Math.ceil(filteredAudit().length / auditState.pageSize));
+  }
+  function pagedAudit() {
+    const list = filteredAudit();
+    // 篩選讓總頁數變少時，可能停在一個已經不存在的頁碼上（例如在第 4 頁按下只剩 1 頁的篩選）
+    if (auditState.page > auditTotalPages()) auditState.page = auditTotalPages();
+    const start = (auditState.page - 1) * auditState.pageSize;
+    return list.slice(start, start + auditState.pageSize);
+  }
+  /* 頁碼清單：總頁數 ≤7 時全部列出；超過就固定顯示首頁、末頁與當前頁 ±1，
+     中間用 "…" 補（不可點的靜態指示）。跟 Figma 範例的 `1 … 12 13 14 … 26` 同一個規則。 */
+  function auditPageList() {
+    const total = auditTotalPages();
+    const cur = auditState.page;
+    if (total <= 7) {
+      const all = [];
+      for (let i = 1; i <= total; i++) all.push(i);
+      return all;
+    }
+    const out = [1];
+    if (cur > 3) out.push("gap");
+    for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) out.push(i);
+    if (cur < total - 2) out.push("gap");
+    out.push(total);
+    return out;
+  }
+  function renderAuditPager() {
+    const total = filteredAudit().length;
+    const totalPages = auditTotalPages();
+    const cur = auditState.page;
+    const item = function (label, page, opts) {
+      opts = opts || {};
+      const cls = "pager-item" + (opts.active ? " active" : "");
+      const dis = opts.disabled ? " disabled" : "";
+      return '<button class="' + cls + '"' + dis + ' data-page="' + page + '"' +
+        (opts.title ? ' aria-label="' + opts.title + '"' : "") + '>' + label + '</button>';
+    };
+    let pager = "";
+    pager += item(icon("chevsLeft"), 1, { disabled: cur === 1, title: "第一頁" });
+    pager += item(icon("chevLeft"), cur - 1, { disabled: cur === 1, title: "上一頁" });
+    auditPageList().forEach(function (p) {
+      pager += p === "gap" ? '<span class="pager-gap">···</span>' : item(p, p, { active: p === cur });
+    });
+    pager += item(icon("chevRight"), cur + 1, { disabled: cur === totalPages, title: "下一頁" });
+    pager += item(icon("chevsRight"), totalPages, { disabled: cur === totalPages, title: "最後一頁" });
+
+    /* 2026-08-14：筆數集中到這一排（Alvie 定）——左邊「每頁顯示 [N] 筆」＋「共 N 筆」總數，
+       右邊分頁器。原本的「第 X–Y 筆」範圍字樣拿掉：跟「共 N 筆」並存時，兩個數字一個是範圍
+       一個是總數，很容易被讀成互相矛盾。總數會跟著篩選結果變動（吃 filteredAudit()）。 */
+    return '<div class="pager-bar">' +
+      '<div class="pager-left">' +
+      '<div class="page-size">每頁顯示' +
+      renderDropdown("auditPageSize", AUDIT_PAGE_SIZES, String(auditState.pageSize), {
+        onChange: function (v) { auditState.pageSize = parseInt(v, 10); auditState.page = 1; refreshAuditList(); }
+      }) + '筆</div>' +
+      '<span class="pager-info" id="auditCount">共 ' + total + ' 筆</span>' +
+      '</div>' +
+      '<div class="pager">' + pager + '</div>' +
+      '</div>';
+  }
+
+  function renderAuditFilterBar() {
+    let html = '<div class="filter-bar">';
+    html += '<div class="filter-search">' + icon("search") + '<input type="text" id="auditSearch" placeholder="搜尋操作者帳號代號" value="' + escAttr(auditState.search) + '"></div>';
+    const catOptions = [{ value: "all", label: "所有類別" }].concat(AUDIT_CATEGORIES);
+    // 任何篩選條件改變都要回到第 1 頁——停在舊頁碼上會看到「篩選好像沒反應」（其實是那頁已經沒資料）
+    html += renderDropdown("auditCatFilter", catOptions, auditState.cat, {
+      onChange: function (v) { auditState.cat = v; auditState.page = 1; refreshAuditList(); }
+    });
+    html += renderDropdown("auditRangeFilter", AUDIT_RANGES, auditState.range, {
+      onChange: function (v) { auditState.range = v; auditState.page = 1; refreshAuditList(); }
+    });
+    // 2026-08-14：筆數從這裡移到底部分頁列（跟每頁筆數選單、分頁器集中在同一條線，語意一致）
+    html += '</div>';
+    return html;
+  }
+
+  function renderAuditList() {
+    const list = pagedAudit(); // 只畫當前這一頁；篩選後的總筆數用 filteredAudit().length
+    if (filteredAudit().length === 0) {
+      return '<div class="table-card"><div class="empty-state">' + icon("search") +
+        '<p>這個條件下沒有紀錄</p>' +
+        '<button class="btn btn-secondary" id="btnClearAuditFilters">清除篩選</button>' +
+        '</div></div>';
+    }
+    /* 欄寬同樣用百分比（table-layout:fixed）。6 欄比帳號表的 9 欄寬鬆很多，
+       說明欄拿走最大一份（它是唯一長度不定的欄），其餘依實際內容配置。 */
+    /* 欄寬＝實測值換算，不是憑感覺調的。字級對齊帳號表（時間/類別/動作/對象從 Small 14
+       拉回 Body 16）之後每欄都變寬，這組比例是在**最窄的驗證情境**（1280 視窗 → 表格 936px）
+       用 clone 量每欄「表頭與內容取較大值 + 32px padding」的 nowrap 需求換算的：
+         時間 173（"2026-08-13 16:40" 16px＝141）｜操作者 101｜類別 112（"帳號與身分"＝80）
+         動作 128（"調整權限設定"＝96）｜對象 99｜說明 290（最長那句＝258）
+       前五欄合計 613px，剩 323px 給說明（需求 290，還有餘裕）——936px 下六欄全部單行。
+       ⚠️ 表頭一定要一起算：帳號表那次就是只看內容寬度，結果「員工編號」表頭自己換行。 */
+    const W = { time: 18.5, actor: 11, cat: 12, action: 13.8, target: 10.7, desc: 34 };
+    const rows = list.map(function (e) {
+      const alertDot = e.alert ? '<span class="alert-dot"></span>' : "";
+      // 對象欄比照帳號表的「帳號」欄＝次要識別碼，用共用的 .muted 灰、不加粗
+      const target = e.target ? escAttr(e.target) : '<span class="audit-dash">—</span>';
+      return '<tr>' +
+        '<td class="audit-time">' + fmtAuditTime(auditTimeOf(e)) + '</td>' +
+        '<td class="wrap-cell"><span class="audit-id">' + escAttr(e.actor) + '</span></td>' +
+        '<td class="wrap-cell">' + auditCatLabel(e.cat) + '</td>' +
+        '<td class="wrap-cell"><span class="audit-act">' + alertDot + escAttr(e.action) + '</span></td>' +
+        '<td class="muted wrap-cell">' + target + '</td>' +
+        '<td class="audit-desc wrap-cell">' + escAttr(e.desc) + '</td>' +
+        '</tr>';
+    }).join("");
+    return '<div class="table-card"><div class="table-scroll"><table class="data-table audit-table"><thead><tr>' +
+      '<th style="width:' + W.time + '%">時間</th>' +
+      '<th style="width:' + W.actor + '%">操作者</th>' +
+      '<th style="width:' + W.cat + '%">類別</th>' +
+      '<th style="width:' + W.action + '%">動作</th>' +
+      '<th style="width:' + W.target + '%">對象</th>' +
+      '<th style="width:' + W.desc + '%">說明</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      renderAuditPager() + '</div>';
+  }
+
+  function renderAuditPage() {
+    /* 2026-08-13：頁尾原本還有一個黃框 .flag-note（「紀錄產生與寫入待正式開發」），
+       Alvie 決定拿掉——這件事他會在報告時口頭講，畫面上不用再佔一塊版面。
+       表格下方只留保存期限那行灰字（那是產品規格，不是原型註記，兩者性質不同）。 */
+    let html = '<div class="page-head"><h1>操作紀錄</h1></div>';
+    html += renderAuditFilterBar();
+    html += '<div id="auditListWrap">' + renderAuditList() + '</div>';
+    const years = Math.round(AUDIT_RETENTION_DAYS / 365 * 10) / 10;
+    html += '<div class="audit-retention">' + icon("history") +
+      '<span>紀錄保存 ' + AUDIT_RETENTION_DAYS + ' 天（約 ' + years + ' 年），期限到自動清除。操作者與對象僅記錄帳號代號，不含姓名、手機與信箱。</span></div>';
+    return html;
+  }
+
+  function refreshAuditList() {
+    const wrap = document.getElementById("auditListWrap");
+    if (!wrap) return;
+    // 筆數現在包在分頁列裡、跟著這次重畫一起產生，不用再另外同步一次
+    wrap.innerHTML = renderAuditList();
+    bindAuditListButtons();
+  }
+  // 列表區（表格＋分頁列）每次重畫都是新節點，事件要重綁——包含分頁列裡的每頁筆數下拉
+  function bindAuditListButtons() {
+    const clearBtn = document.getElementById("btnClearAuditFilters");
+    if (clearBtn) clearBtn.addEventListener("click", function () {
+      auditState.search = ""; auditState.cat = "all"; auditState.range = "all"; auditState.page = 1;
+      const searchEl = document.getElementById("auditSearch");
+      if (searchEl) searchEl.value = "";
+      ddSetValue("auditCatFilter", "all", { silent: true });
+      ddSetValue("auditRangeFilter", "all", { silent: true });
+      refreshAuditList();
+    });
+    document.querySelectorAll("#auditListWrap .pager-item").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (btn.hasAttribute("disabled") || btn.classList.contains("active")) return;
+        auditState.page = parseInt(btn.getAttribute("data-page"), 10);
+        refreshAuditList();
+      });
+    });
+    ddBind("auditPageSize");
+  }
+  function wireAuditPage() {
+    const searchEl = document.getElementById("auditSearch");
+    if (searchEl) searchEl.addEventListener("input", function () {
+      auditState.search = this.value; auditState.page = 1; refreshAuditList();
+    });
+    ddBind("auditCatFilter");
+    ddBind("auditRangeFilter");
+    bindAuditListButtons();
   }
 
   // ============================================================
@@ -2796,8 +3546,27 @@
   document.querySelectorAll("#demoRoleBar [data-demo-role]").forEach(function (btn) {
     btn.addEventListener("click", function () { setDemoRole(btn.getAttribute("data-demo-role")); });
   });
+
+  // 合約狀態切換（2026-08-14 新增）：跟身份切換是獨立維度，只管總覽頁合約摘要卡版本，
+  // 不影響側欄權限可見範圍。合約卡僅企業管理員可見，切到其他身份時這組切換不會反映在畫面上
+  function setDemoContract(status) {
+    if (status === state.demoContract) return;
+    state.demoContract = status;
+    syncDemoContractBar();
+    if (state.activeTop === "overview") renderContent();
+  }
+  function syncDemoContractBar() {
+    document.querySelectorAll("#demoRoleBar [data-demo-contract]").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-demo-contract") === state.demoContract);
+    });
+  }
+  document.querySelectorAll("#demoRoleBar [data-demo-contract]").forEach(function (btn) {
+    btn.addEventListener("click", function () { setDemoContract(btn.getAttribute("data-demo-contract")); });
+  });
+
   document.getElementById("orgDrawerMask").addEventListener("click", closeDrawer);
   syncDemoRoleBar();
+  syncDemoContractBar();
 
   // ---- topbar popovers ----
   function wirePopover(btnId, popId) {
