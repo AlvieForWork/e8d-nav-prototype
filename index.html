@@ -3436,27 +3436,36 @@
     });
   }
 
+  /* 2026-08-17 Alvie 定案：結果頁只呈現「實際進入匯入的列」。
+     格式錯誤的列在前一段（檢視名單）就已經被略過、不進佇列，也不該出現在結果頁——
+     舊版拿 orgState.importRows（原始全部列）當來源，是為了讓使用者看到「完整全貌」，
+     那個設計已經廢除：兩種失敗混在同一張表裡，會讓「共 N 筆」變成上傳總數、
+     失敗原因欄還印出格式錯誤文案，跟「這一頁只講寫入結果」的定位衝突。 */
   function finishImportRun() {
-    const all = orgState.importRows || [];
-    const ok = all.filter(function (r) { return r.state === "done"; }).length;
-    /* 結果頁把成功的排在最前面，失敗的（系統失敗＋格式錯誤）跟在後面，
-       使用者一眼先看到「成功了幾筆」，要修的集中在下半部。 */
-    const sorted = all.slice().sort(function (a, b) {
-      // 成功置頂 → 失敗（系統失敗／格式錯誤）→ 中途停止未處理的排最後
+    const rows = importValidRows();   // ＝實際進入匯入佇列的那批（不含格式錯誤列）
+    const ok = rows.filter(function (r) { return r.state === "done"; }).length;
+    // 系統失敗＝格式沒問題、但寫入時出錯（網路／逾時／伺服器），只可能發生在匯入那一段
+    const sysFail = rows.filter(function (r) { return !!r.runErr; }).length;
+    /* 成功置頂 → 系統失敗 → 中途停止未處理的排最後，
+       使用者一眼先看到「成功了幾筆」，要處理的集中在下半部。 */
+    const sorted = rows.slice().sort(function (a, b) {
       const rank = function (r) {
         if (r.state === "done") return 0;
-        if (r.runErr || r.err) return 1;
-        return 2;
+        if (r.runErr) return 1;
+        return 2;   // 按了停止、還沒輪到的
       };
       return rank(a) - rank(b);
     });
-    /* 【不留個資】Audit Log 只記筆數與成功／失敗數，沒有任何欄位內容 */
+    /* 【不留個資】Audit Log 只記筆數，沒有任何欄位內容。
+       口徑跟結果頁一致：總數＝進入匯入的筆數，失敗數只算系統失敗，
+       前一段略過的格式錯誤列完全不記（它們沒有進入匯入，不是這筆操作的結果）。
+       中途停止時 總數 ≠ 成功＋失敗，差額是「還沒輪到」的，用後面那個標記說明。 */
     addAuditEntry({
       cat: "data", action: "匯入帳號", target: null,
-      desc: "匯入 " + all.length + " 筆，成功 " + ok + " 筆、失敗 " + (all.length - ok) + " 筆" +
+      desc: "匯入 " + rows.length + " 筆，成功 " + ok + " 筆、失敗 " + sysFail + " 筆" +
             (orgState.importStopped ? "（中途停止）" : "")
     });
-    orgState.importResult = { rows: sorted, ok: ok, stopped: orgState.importStopped };
+    orgState.importResult = { rows: sorted, ok: ok, sysFail: sysFail, stopped: orgState.importStopped };
     orgState.importStep = "result";
     paintImportModal();
   }
@@ -3579,19 +3588,26 @@
     if (st === "result") {
       const res = orgState.importResult || { rows: [], ok: 0 };
       let html = head;
+      /* 「共 N 筆」＝實際進入匯入的筆數（res.rows 已經只有這批，見 finishImportRun），
+         不是原始上傳總數——前一段略過的格式錯誤列不屬於這次寫入的結果。
+         「N 筆未匯入」＝系統失敗＋按了停止還沒輪到的，兩者都確實沒被建立；
+         格式錯誤列不在 res.rows 裡，所以不可能被算進來。 */
+      const notImported = res.rows.length - res.ok;
       html += '<div class="import-summary">' +
         '<span>匯入成功 <span class="is-ok">' + res.ok + '</span> 筆</span>' +
         '<span class="is-sep">/</span><span>共 ' + res.rows.length + ' 筆</span>' +
-        (res.rows.length - res.ok > 0 ? '<span class="is-bad">（' + (res.rows.length - res.ok) + ' 筆未匯入）</span>' : "") +
+        (notImported > 0 ? '<span class="is-bad">（' + notImported + ' 筆未匯入）</span>' : "") +
         (res.stopped ? '<span class="is-bad">· 已中途停止</span>' : "") +
         '</div>';
       const cells = res.rows.map(function (r) {
         /* 結果一律看 r.state，不能只看有沒有錯誤原因——中途停止時，
-           還沒輪到的那些列既沒有格式錯誤也沒有系統失敗，但它們並沒有被建立。
-           三種結果：成功（已寫入）／失敗（格式錯誤或系統失敗）／未處理（按了停止）。 */
+           還沒輪到的那些列既沒有系統失敗也沒有成功，但它們並沒有被建立。
+           三種結果：成功（已寫入）／失敗（系統失敗）／未處理（按了停止）。
+           ⚠️ 這裡只認 r.runErr（系統失敗），**刻意不看 r.err**（格式錯誤）——
+           來源已不含格式錯誤列，再判斷它只會讓格式文案有機會漏進這一頁。 */
         const isDone = r.state === "done";
-        const isFail = !!r.runErr || !!r.err;
-        const reason = r.runErr || r.err || (isDone ? "" : "已停止，這一筆未處理");
+        const isFail = !!r.runErr;
+        const reason = r.runErr || (isDone ? "" : "已停止，這一筆未處理");
         const bad = isFail;
         const val = function (v) { return v ? '<span class="cell-val">' + escAttr(v) + '</span>' : '<span class="empty-val">—</span>'; };
         return '<tr' + (bad ? ' class="is-invalid"' : "") + '>' +
