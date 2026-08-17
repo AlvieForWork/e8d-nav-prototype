@@ -21,6 +21,17 @@
     --accent-active: #F04D0A;/* primary/900 */
     --accent-contrast: #FFFFFF; /* color/text/on-brand */
     --accent-soft: #FFEADE;  /* primary/75 · bg/selected 同款淡橘 */
+    /* Switch 軌道（2026-08-17 新增）——⚠️ 設計系統缺口：Figma 至今沒有 Switch 元件，
+       所以沒有現成的「軌道灰」token 可用。這兩個是語意 alias，值全部指向既有 token，
+       沒有硬填任何新色碼：
+         off      → neutral/400（＝ --text-disabled 的同一個值，但語意無關，只是借值）
+         disabled → neutral/100（＝ --surface-2）
+       關閉態刻意取 400 而不是 300：400 對白底卡片的對比約 2.3（原本的 neutral/100 只有 1.06，
+       那才是它看起來像 disabled 的原因），且和 disabled 用的 100 之間隔了三階、拉得開。
+       ⚠️ 正式收進設計系統時要建立自己的 semantic token（例如 color/bg/switch-track 與
+       -disabled，各自指向 neutral/400 與 neutral/100），不要繼續借 --text-disabled。 */
+    --switch-track-off: var(--text-disabled);
+    --switch-track-disabled: var(--surface-2);
     --phase2: #FE9B0E;       /* color/text/warning */
     --phase2-soft: #FFF7E1;  /* color/bg/warning */
     --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-full: 999px;
@@ -659,6 +670,10 @@
     font-family: var(--font-ui); font-size: var(--fs-body); color: var(--text); line-height: var(--lh-body);
   }
   .dd-item:hover { background: var(--bg); }
+  /* 2026-08-17：勾位改成「固定寬度的空位」，選中與未選中的文字左邊界對齊在同一條線。
+     原本未選中的列根本不輸出勾的節點，文字就往左跑，兩種列的左內距看起來不一致。
+     空位寬度 = spacing-lg(16px) = .dd-check 的尺寸，勾出現時剛好填滿、不會推動文字。 */
+  .dd-item .dd-tick { width: var(--spacing-lg); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
   .dd-item .dd-check { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
 
   /* ---- 篩選列（即時過濾，無查詢按鈕） ---- */
@@ -918,17 +933,35 @@
   }
   .cell-tip.open { opacity: 1; transform: translateY(0); }
 
-  /* ---- 開關（Toggle）：系統缺口，目前只有 Checkbox/Radio，先照既有色彩語言畫一版 ---- */
-  .toggle { position: relative; display: inline-flex; align-items: center; width: 40px; height: 22px; flex-shrink: 0; }
+  /* ---- 開關（Toggle）：系統缺口，目前只有 Checkbox/Radio，先照既有色彩語言畫一版 ----
+     2026-08-17 關閉態改深（Alvie：原本淺到像 disabled、讓人以為不能點）：
+       關閉 → 軌道 neutral/400 中灰、圓鈕純白＋陰影（實體開關停在「關」的位置）
+       開啟 → 主色橘（不變）
+       禁用 → 軌道 neutral/100 淺灰、圓鈕無陰影（扁平、明顯不可互動）
+     關閉態刻意用比 disabled **深兩階** 的灰，兩者才拉得開；淺灰整段留給 disabled。 */
+  .toggle { position: relative; display: inline-flex; align-items: center; width: 40px; height: 24px; flex-shrink: 0; }
   .toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
-  .toggle .track { position: absolute; inset: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-full); transition: background .15s ease, border-color .15s ease; }
-  /* 2026-08-11 修正：thumb 原本 top/left 都是 2px，但 .track 還多吃掉 1px 邊框，
-     實際看起來上方留白 2px、下方留白變成快 4px，圓圈偏上不居中。改成 top/left 都 3px
-     （對稱扣掉邊框），checked 位移量隨之從 18px 重算：40 - 16 - 3 - 3 = 18px，數字沒變但基準對了 */
-  .toggle .thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.15); transition: transform .15s ease; }
+  /* 邊框與底色同色（開啟態本來就是這個模式）：關閉態若留淺色邊框，深軌道外圈會多一道
+     淺邊，看起來像沒對齊的描邊 */
+  .toggle .track {
+    position: absolute; inset: 0; background: var(--switch-track-off); border: 1px solid var(--switch-track-off);
+    border-radius: var(--radius-full); transition: background .15s ease, border-color .15s ease;
+  }
+  /* 2026-08-17 尺寸校正到 4px grid（跟 Figma Switch 元件對齊，同一輪回寫的規格）：
+     40×22 的 22 跟位移量 18 都不在 4px grid 上，改成 40×24、圓鈕 16、內距 4、位移 16。
+     checked 位移＝ 40 - 16 - 4 - 4 = 16px。高度只差 2px，肉眼無感，但系統裡不留破 grid 的值。 */
+  .toggle .thumb {
+    position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--surface); box-shadow: var(--shadow-sm);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
   .toggle input:checked ~ .track { background: var(--accent); border-color: var(--accent); }
-  .toggle input:checked ~ .thumb { transform: translateX(18px); }
-  .toggle input:disabled ~ .track { opacity: .5; cursor: not-allowed; }
+  .toggle input:checked ~ .thumb { transform: translateX(16px); }
+  /* 禁用：不再用 opacity 疊在關閉態上——那只是把同一個顏色調淡，關閉態一深就跟它撞在一起。
+     改成獨立的淺灰軌道，並把圓鈕的陰影拿掉：少了浮起感，一眼就看得出不能碰。 */
+  .toggle input:disabled { cursor: not-allowed; }
+  .toggle input:disabled ~ .track { background: var(--switch-track-disabled); border-color: var(--border); }
+  .toggle input:disabled ~ .thumb { box-shadow: none; }
   .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
   .toggle-row .tr-label { font-size: var(--fs-small); color: var(--text); font-weight: 600; }
   .toggle-row .tr-sub { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 2px; }
@@ -2390,8 +2423,11 @@
     const state = ddRegistry[id];
     return '<div class="dd-panel" id="ddpanel-' + id + '" role="listbox">' + state.options.map(function (o) {
       const isSelected = o.value === state.value;
+      // 勾位一律輸出（見 .dd-tick 的 CSS 註解）：沒選中就是一塊等寬空白，
+      // 這樣有勾／沒勾的列文字都從同一條線開始
       return '<button type="button" class="dd-item" data-value="' + escAttr(o.value) + '">' +
-        (isSelected ? icon("check", 'class="ico dd-check"') : "") + '<span>' + escAttr(o.label) + '</span></button>';
+        '<span class="dd-tick">' + (isSelected ? icon("check", 'class="ico dd-check"') : "") + '</span>' +
+        '<span>' + escAttr(o.label) + '</span></button>';
     }).join("") + '</div>';
   }
   function ddOpen(triggerEl) {
@@ -4370,7 +4406,7 @@
 
   function renderAuditFilterBar() {
     let html = '<div class="filter-bar">';
-    html += '<div class="filter-search">' + icon("search") + '<input type="text" id="auditSearch" placeholder="搜尋操作者帳號代號" value="' + escAttr(auditState.search) + '"></div>';
+    html += '<div class="filter-search">' + icon("search") + '<input type="text" id="auditSearch" placeholder="搜尋帳號" value="' + escAttr(auditState.search) + '"></div>';
     const catOptions = [{ value: "all", label: "所有類別" }].concat(AUDIT_CATEGORIES);
     // 任何篩選條件改變都要回到第 1 頁——停在舊頁碼上會看到「篩選好像沒反應」（其實是那頁已經沒資料）
     html += renderDropdown("auditCatFilter", catOptions, auditState.cat, {
