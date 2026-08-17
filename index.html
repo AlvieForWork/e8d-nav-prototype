@@ -4266,10 +4266,10 @@
 
   // 四大類別：value 同時是篩選值與資料裡的 cat 欄位
   const AUDIT_CATEGORIES = [
-    { value: "identity", label: "帳號與身分" },
+    { value: "identity", label: "登入與帳號" },
     { value: "permission", label: "權限異動" },
-    { value: "business", label: "核心業務" },
-    { value: "data", label: "資料操作" }
+    { value: "business", label: "點數與儲值" },
+    { value: "data", label: "匯出與匯入" }
   ];
   function auditCatLabel(v) {
     const hit = AUDIT_CATEGORIES.find(function (c) { return c.value === v; });
@@ -4433,7 +4433,7 @@
     /* 欄寬＝實測值換算，不是憑感覺調的。字級對齊帳號表（時間/類別/動作/對象從 Small 14
        拉回 Body 16）之後每欄都變寬，這組比例是在**最窄的驗證情境**（1280 視窗 → 表格 936px）
        用 clone 量每欄「表頭與內容取較大值 + 32px padding」的 nowrap 需求換算的：
-         時間 173（"2026-08-13 16:40" 16px＝141）｜操作者 101｜類別 112（"帳號與身分"＝80）
+         時間 173（"2026-08-13 16:40" 16px＝141）｜操作者 101｜類別 112（"登入與帳號"＝80）
          動作 128（"調整權限設定"＝96）｜對象 99｜說明 290（最長那句＝258）
        ⚠️ 表頭一定要一起算：帳號表那次就是只看內容寬度，結果「員工編號」表頭自己換行。
        2026-08-14 重配：說明欄字級拉回 Body 16 後需求從 290 → 326，且 ≤1366px 時 cell padding
