@@ -21,6 +21,12 @@
     --accent-active: #F04D0A;/* primary/900 */
     --accent-contrast: #FFFFFF; /* color/text/on-brand */
     --accent-soft: #FFEADE;  /* primary/75 · bg/selected 同款淡橘 */
+    /* 狀態文字色（2026-08-17 為 toast 的兩種狀態新增）。
+       ⚠️ 全檔還有 20+ 處把這兩個值硬填成色碼（.state-ok／.state-fail／.err-msg／
+       badge-dot…），那是既有狀況，這次刻意不一起改（純顏色收斂是獨立一件事，
+       會動到二十幾個選擇器）。新程式碼請用這兩個 token，不要再硬填。 */
+    --text-success: #0C9D61; /* color/text/success · success/700 */
+    --text-error: #EC2D30;   /* color/text/error · error/700 */
     /* Switch 軌道（2026-08-17 新增）——⚠️ 設計系統缺口：Figma 至今沒有 Switch 元件，
        所以沒有現成的「軌道灰」token 可用。這兩個是語意 alias，值全部指向既有 token，
        沒有硬填任何新色碼：
@@ -691,6 +697,25 @@
   .filter-bar .dd { width: 148px; }
   .filter-bar-spacer { flex: 1; }
 
+  /* ---- DateRangePicker（2026-08-17）----
+     這階段刻意用原生 <input type="date">，不手刻月曆面板。
+     ⚠️ 已知取捨：原生日期欄位的外觀各瀏覽器不一致（Chrome 有日曆圖示、Safari 不同），
+     沒辦法只靠 CSS 完全統一——這是選簡易做法的既定代價，也是未來要換自畫面板的主因。
+     欄位樣式沿用 .filter-search input 那一組既有值（36px 高、radius-md、focus 橘框＋光暈），
+     不另訂一套。 */
+  .date-range { display: inline-flex; align-items: center; gap: var(--spacing-sm); }
+  .date-range input[type="date"] {
+    width: 148px; height: 36px; padding: 0 var(--spacing-md);
+    border-radius: var(--radius-md); border: 1px solid var(--border);
+    background: var(--surface); color: var(--text);
+    font-size: var(--fs-body); line-height: var(--lh-body); font-family: var(--font-ui);
+  }
+  .date-range input[type="date"]:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .date-range input[type="date"]:disabled { background: var(--surface-2); color: var(--text-disabled); cursor: not-allowed; }
+  .date-range .dr-sep { color: var(--text-muted); font-size: var(--fs-small); flex-shrink: 0; }
+
   /* ---- 部門篩選 chip 列（2026-08-13 取代原本左側的直立組織樹，企業管理員可見）----
      原本的 .org-tree 是 216px 寬的左側卡片，跟表格左右並排、吃掉主內容區 236px（含 gap）。
      實測：16 筆正常資料要完全不換行需要 1078px，但有樹的時候表格只剩 860px——
@@ -1285,7 +1310,11 @@
     z-index: 300; max-width: calc(100vw - 48px);
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
-  .toast .ico { width: 18px; height: 18px; color: #0C9D61; flex-shrink: 0; }
+  .toast .ico { width: 18px; height: 18px; color: var(--text-success); flex-shrink: 0; }
+  /* 2026-08-17 新增錯誤態（系統失敗用，跟表單的欄位驗證錯誤不同層級）。
+     卡片本體維持白底＋邊框＋陰影完全不變，只換 icon 與 icon 顏色——
+     跟 Figma 的 Toast component（State=Success／Error）同一套規格。 */
+  .toast.is-error .ico { color: var(--text-error); }
 
   @media (max-width: 767px) {
     .content { padding: 18px 16px 32px; }
@@ -1498,6 +1527,13 @@
     /* 2026-08-17 光學對齊：12→18 單位（50%→75%）。
        ⚠️ 斜線在相同外框下視覺上比正交線條大，這顆放大後要實際看畫面確認不會太重 */
     x: '<path d="M21 3 3 21"/><path d="m3 3 18 18"/>',
+    /* toast 錯誤態專用的小叉（2026-08-17）。
+       ⚠️ 不能直接用上面那顆 x：它佔滿 3→21（18 單位），在 toast 的 18px 框裡幾何是 18×18，
+       而成功態的 check 幾何只有 13.5×9.3——叉叉會明顯比勾大一號（Alvie 實際看畫面反映過兩次）。
+       這顆縮成 12.4 單位居中（5.8→18.2），18px 顯示時幾何＝9.3×9.3、stroke＝1.5，
+       高度與 check 完全一致。數值跟 Figma 的 Toast／State=Error 校正後的 x 對齊，
+       兩邊要一起改，不要只改一邊。 */
+    xToast: '<path d="M18.2 5.8 5.8 18.2"/><path d="M5.8 5.8 18.2 18.2"/>',
     /* 2026-08-14 光學對齊：Lucide 原始的 plus 只佔 viewBox 14/24（58%），
        跟 download/trash 這類 18/24（75%）的圖示並排時明顯小一截（實測小 29%）。
        改成 3→21 共 18 單位，填充率對齊 75%。詳見檔案上方「icon 光學對齊規則」 */
@@ -2591,6 +2627,114 @@
     ddBind(cfg.ddId);
   }
 
+  /* ============================================================
+     DateRangePicker（共用元件，2026-08-17）
+     ------------------------------------------------------------
+     日期區間選擇。這階段內部用原生 <input type="date"> 兩欄，**刻意不手刻月曆面板**，
+     但介面設計成跟實作無關，未來要升級成精緻面板（或改接日期函式庫）時，
+     只需替換 renderDateRange() 的 HTML 與 drBind() 的事件綁定，
+     **所有呼叫方與 drValue/drSetValue 的格式都不用動**。
+
+     API（完全比照本檔既有的 Dropdown 元件模式，不自創第二種風格）：
+       renderDateRange(id, value, opts)  → HTML 字串
+       drBind(id)                        → HTML 進 DOM 後綁事件
+       drValue(id)                       → { start, end }
+       drSetValue(id, value, { silent }) → 程式化設值
+
+     ⚠️ 對外一律用 ISO 日期字串 "YYYY-MM-DD"，不傳 Date 物件、不傳 event、不傳 DOM 節點。
+        這是能無痛抽換內部實作的關鍵——呼叫方只認得字串格式。
+        （ISO 字串的字典序等於時序，所以可以直接用 < > 比較，不必轉 Date）
+
+     元件內部負責、呼叫方完全不用管的四件事：
+       ① 起訖顛倒自動對調（對外永遠 start <= end）
+       ② 超出 min/max 自動夾回
+       ③ 只選一邊時不觸發 onChange（避免呼叫方拿殘缺區間去查詢）
+       ④ 不暴露 DOM——要讀值一律走 drValue(id)，不要自己 querySelector 內部的 input
+     ============================================================ */
+  const drRegistry = {};
+
+  // Date → "YYYY-MM-DD"。對外也用得到（呼叫方要算 max、或把紀錄的時間轉成同格式比對）
+  function drISO(date) {
+    const p = function (n) { return n < 10 ? "0" + n : "" + n; };
+    return date.getFullYear() + "-" + p(date.getMonth() + 1) + "-" + p(date.getDate());
+  }
+
+  // 正規化：夾制邊界 → 顛倒對調。內部用，不對外
+  function drNormalize(st, raw) {
+    const clamp = function (d) {
+      if (!d) return null;
+      if (st.min && d < st.min) return st.min;
+      if (st.max && d > st.max) return st.max;
+      return d;
+    };
+    let s = clamp(raw.start || null);
+    let e = clamp(raw.end || null);
+    if (s && e && s > e) { const t = s; s = e; e = t; }
+    return { start: s, end: e };
+  }
+
+  function renderDateRange(id, value, opts) {
+    opts = opts || {};
+    value = value || {};
+    drRegistry[id] = {
+      value: { start: value.start || null, end: value.end || null },
+      min: opts.min || null,
+      max: opts.max || null,
+      disabled: !!opts.disabled,
+      onChange: opts.onChange || null
+    };
+    const st = drRegistry[id];
+    const bound = function (k, v) { return v ? " " + k + '="' + escAttr(v) + '"' : ""; };
+    const dis = st.disabled ? " disabled" : "";
+    const field = function (which, val, label) {
+      return '<input type="date" id="dr-' + id + "-" + which + '" value="' + escAttr(val || "") + '"' +
+        bound("min", st.min) + bound("max", st.max) + dis +
+        ' aria-label="' + escAttr(label) + '">';
+    };
+    return '<div class="date-range" data-dr="' + id + '">' +
+      field("start", st.value.start, opts.startLabel || "開始日期") +
+      '<span class="dr-sep">～</span>' +
+      field("end", st.value.end, opts.endLabel || "結束日期") +
+      '</div>';
+  }
+
+  function drBind(id) {
+    const st = drRegistry[id];
+    if (!st) return;
+    const sEl = document.getElementById("dr-" + id + "-start");
+    const eEl = document.getElementById("dr-" + id + "-end");
+    if (!sEl || !eEl) return;
+    const handler = function () {
+      const norm = drNormalize(st, { start: sEl.value, end: eEl.value });
+      st.value = norm;
+      // 正規化的結果要回寫欄位，否則畫面顯示的跟實際生效的條件會不一致
+      if (sEl.value !== (norm.start || "")) sEl.value = norm.start || "";
+      if (eEl.value !== (norm.end || "")) eEl.value = norm.end || "";
+      // 半完成狀態不回報（見上方說明③）
+      if (st.onChange && norm.start && norm.end) st.onChange({ start: norm.start, end: norm.end });
+    };
+    sEl.addEventListener("change", handler);
+    eEl.addEventListener("change", handler);
+  }
+
+  function drValue(id) {
+    const st = drRegistry[id];
+    return st ? { start: st.value.start, end: st.value.end } : null;
+  }
+
+  function drSetValue(id, value, opts) {
+    opts = opts || {};
+    const st = drRegistry[id];
+    if (!st) return;
+    const norm = drNormalize(st, value || {});
+    st.value = norm;
+    const sEl = document.getElementById("dr-" + id + "-start");
+    const eEl = document.getElementById("dr-" + id + "-end");
+    if (sEl) sEl.value = norm.start || "";
+    if (eEl) eEl.value = norm.end || "";
+    if (!opts.silent && st.onChange && norm.start && norm.end) st.onChange({ start: norm.start, end: norm.end });
+  }
+
   function dialFor(iso) {
     const c = COUNTRY_CODES.find(function (c) { return c.iso === iso; });
     return c ? c.dial : "";
@@ -3218,7 +3362,16 @@
      【不留個資】驗證只在記憶體裡做，錯誤訊息不帶出整列內容；
      寫進 Audit Log 的只有筆數與成功／失敗數，沒有任何個資明細。
      ============================================================ */
-  const IMPORT_HEADERS = ["帳號", "姓名", "部門", "角色", "密碼", "員工編號", "國碼", "行動電話", "電子信箱", "開啟國際簡訊", "啟用帳號"];
+  const IMPORT_HEADERS = ["帳號", "姓名", "部門", "角色", "密碼", "員工編號", "國碼", "手機", "電子信箱", "開啟國際簡訊", "啟用帳號"];
+  /* 標頭的舊寫法對照（2026-08-17 全站「行動電話」統一成「手機」時加的）：
+     已經下載舊版範例檔的人，檔案第一列還是寫「行動電話」，標頭比對是逐格完全相符，
+     不留這層對照的話那些檔案會整份被擋下。畫面一律顯示新字，只有比對時放寬。 */
+  const IMPORT_HEADER_ALIASES = { "手機": ["行動電話"] };
+  function importHeaderMatch(cell, expected) {
+    if (cell === expected) return true;
+    const alt = IMPORT_HEADER_ALIASES[expected];
+    return !!alt && alt.indexOf(cell) !== -1;
+  }
 
   // Excel 常見的格式雜訊：數字欄被存成 "1.0"、前後空白、全形空白
   function importCell(v) {
@@ -3286,10 +3439,10 @@
     // 員工編號（選填）
     if (row.empNo && row.empNo.length > 50) errs.push("員工編號不可超過 50 字");
 
-    // 國碼＋行動電話
+    // 國碼＋手機
     if (!row.dial) errs.push("國碼為必填");
     else if (!importIsValidDial(row.dial)) errs.push("無效的國碼");
-    if (!row.phone) errs.push("行動電話為必填");
+    if (!row.phone) errs.push("手機為必填");
     else if (row.dial && importIsValidDial(row.dial) && !importPhoneOk(row.dial, row.phone)) errs.push("手機格式錯誤");
 
     // 電子信箱
@@ -3314,7 +3467,7 @@
     }
     // 標頭比對：欄位名與順序都要跟範例檔一致
     const head = (sheetRows[0] || []).map(importCell);
-    const headOk = IMPORT_HEADERS.every(function (h, i) { return head[i] === h; });
+    const headOk = IMPORT_HEADERS.every(function (h, i) { return importHeaderMatch(head[i], h); });
     if (!headOk) {
       return { fileError: {
         title: "欄位標頭不符",
@@ -3611,7 +3764,7 @@
       html += '<div class="import-list"><table><thead><tr>' +
         '<th style="width:5%">列</th>' +
         '<th style="width:11%">狀態</th><th style="width:13%">帳號</th><th style="width:11%">姓名</th>' +
-        '<th style="width:11%">部門</th><th style="width:12%">角色</th><th style="width:16%">行動電話</th>' +
+        '<th style="width:11%">部門</th><th style="width:12%">角色</th><th style="width:16%">手機</th>' +
         '<th style="width:21%">電子信箱</th>' +
         '</tr></thead><tbody>' + cells + '</tbody></table></div>';
       html += '<div class="cm-foot" style="justify-content:space-between">' +
@@ -3666,7 +3819,7 @@
       html += '<div class="import-list"><table><thead><tr>' +
         '<th style="width:5%">列</th>' +
         '<th style="width:9%">結果</th><th style="width:12%">帳號</th><th style="width:10%">姓名</th>' +
-        '<th style="width:10%">部門</th><th style="width:11%">角色</th><th style="width:14%">行動電話</th>' +
+        '<th style="width:10%">部門</th><th style="width:11%">角色</th><th style="width:14%">手機</th>' +
         '<th style="width:15%">電子信箱</th><th style="width:14%">失敗原因</th>' +
         '</tr></thead><tbody>' + cells + '</tbody></table></div>';
       html += '<div class="cm-foot"><button class="btn btn-primary" id="importFinish">完成</button></div>';
@@ -3945,7 +4098,7 @@
     html += '</div>';
     html += '<div class="hint" style="margin:-10px 0 16px">長度 8–16 碼，須英數字混合並包含大寫及小寫英文字母' + (isEdit ? '；留空表示不變更密碼' : '') + '</div>';
     html += field("empNo", "員工編號", false, '<input type="text" id="fEmpNo" maxlength="50" value="' + escAttr(acct ? acct.empNo : "") + '">');
-    html += '<div class="field-group" data-field="phone"><label>行動電話<span class="req">*</span></label><div class="field-row">' +
+    html += '<div class="field-group" data-field="phone"><label>手機<span class="req">*</span></label><div class="field-row">' +
       '<div style="flex:1.5">' + renderDropdown("fCountry", countryOptions, initialCountry, {
         onChange: function (v) { document.getElementById("fDial").textContent = dialDisplay(v); }
       }) + '</div>' +
@@ -4284,7 +4437,7 @@
   /* 39 筆，依時間新→舊排列（`min` 由小到大）。設計原則：
      ① 15 種動作每種至少 2 筆（登入成功／登出／登入失敗／帳號鎖定／帳號解鎖／變更密碼／重設密碼／
         變更角色／新增子帳號／刪除子帳號／調整權限設定／儲值／扣點／匯出報表／匯出資料），
-        另含「撥點」「變更聯絡資料」兩筆額外動作（撥點是既有功能；變更聯絡資料用來示範遮罩寫法）
+        另含「撥點」「變更聯絡資料」兩筆額外動作（撥點是既有功能；變更聯絡資料用來示範「變更類只記欄位名、不帶值」的寫法）
      ② 四個時間區間都要有料，篩選才看得出差別：
         今天 12 筆｜近 7 天再 +10｜近 30 天再 +10｜30–90 天 +5｜90 天以上 +2
      ③ 每個類別都橫跨多個時間區間，所以「類別 × 時間」兩個篩選同時下也不會篩成空白
@@ -4307,7 +4460,7 @@
     { min: 1290, actor: "lily.wu", cat: "data", action: "匯出資料", target: null, desc: "發送查詢結果（不記錄匯出內容）" },
     { min: 1450, actor: "emma", cat: "permission", action: "調整權限設定", target: "david.lin", desc: "變更欄位：可用功能範圍" },
     { min: 1980, actor: "emma", cat: "business", action: "撥點", target: "tina.hsu", desc: "撥點 20,000 點" },
-    { min: 2900, actor: "emma", cat: "permission", action: "變更聯絡資料", target: "david.lin", desc: "變更欄位：行動電話（09xx-xxx-347）" },
+    { min: 2900, actor: "emma", cat: "permission", action: "變更聯絡資料", target: "david.lin", desc: "變更欄位：手機" },
     { min: 4320, actor: "emma", cat: "permission", action: "刪除子帳號", target: "kevin.ho", desc: "帳號已刪除，紀錄保留" },
     { min: 5760, actor: "ben.chen", cat: "business", action: "扣點", target: null, desc: "簡訊發送扣點 640 點" },
     { min: 7200, actor: "david.lin", cat: "data", action: "匯出報表", target: null, desc: "撥點查詢 · 2026-06（不記錄匯出內容）" },
@@ -4349,15 +4502,145 @@
     });
   }
 
-  const auditState = { search: "", cat: "all", range: "30d", page: 1, pageSize: PAGE_SIZE_DEFAULT };
-  // 區間選項：系統目前沒有 Date Picker 元件（設計系統缺口），所以先用既有的 Dropdown
-  // 做預設區間，不自畫日曆。之後若要精準自訂起訖日，要先決定是否擴充系統
+  /* ============================================================
+     操作紀錄匯出（2026-08-17）
+     ------------------------------------------------------------
+     🔒【個資原則】這一段是整個匯出功能的防線，改動前務必讀完：
+       ① 匯出欄位**只有下面這 6 個**，全部直接取自 AUDIT_LOG 這筆紀錄本身。
+       ② **絕對不可**用 e.actor / e.target 去 join ACCOUNTS 撈姓名／手機／信箱——
+          畫面上只顯示帳號代號，匯出檔卻是明文，那就是個資外洩。
+          （所以這裡刻意不引用 ACCOUNTS，日後也不要為了「檔案好讀」加上去）
+       ③ e.desc 在資料源就已經是去識別化的寫法（只記欄位名、不記變更值、匯出類不記內容），
+          這裡原樣輸出、**不做任何還原或補值**。
+     ============================================================ */
+  const AUDIT_EXPORT_COLUMNS = [
+    { key: "time",   label: "時間" },
+    { key: "actor",  label: "操作者" },
+    { key: "cat",    label: "類別" },
+    { key: "action", label: "動作" },
+    { key: "target", label: "對象" },
+    { key: "desc",   label: "說明" }
+  ];
+
+  // 一筆紀錄 → 一列的 6 個值。白名單式：只有這裡列出的欄位會進檔案
+  function auditExportRow(e) {
+    return {
+      time: fmtAuditTime(auditTimeOf(e)),
+      actor: e.actor,                    // 帳號代號，不是姓名
+      cat: auditCatLabel(e.cat),
+      action: e.action,
+      target: e.target || "",            // 帳號代號或空，不是姓名
+      desc: e.desc                       // 已去識別化的說明，原樣輸出
+    };
+  }
+
+  /* CSV escape：含逗號／雙引號／換行的值要用雙引號包住，內部的雙引號要 double up。
+     說明欄有「、」串起來的長句，也可能出現逗號，所以這一步不能省。 */
+  function csvCell(v) {
+    const s = v == null ? "" : String(v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function auditToCsv(list) {
+    const lines = [AUDIT_EXPORT_COLUMNS.map(function (c) { return csvCell(c.label); }).join(",")];
+    list.forEach(function (e) {
+      const row = auditExportRow(e);
+      lines.push(AUDIT_EXPORT_COLUMNS.map(function (c) { return csvCell(row[c.key]); }).join(","));
+    });
+    return lines.join("\r\n");   // CSV 標準換行是 CRLF
+  }
+
+  /* 觸發下載。⚠️ 開頭要加 UTF-8 BOM（﻿），否則 Excel 開啟中文會變亂碼——
+     這是選 CSV 的已知代價，不加 BOM 使用者會直接說「匯出檔壞了」。 */
+  function downloadCsv(filename, csvText) {
+    const blob = new Blob(["﻿" + csvText], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /* 匯出當下的篩選條件摘要，寫進 Audit Log 用。
+     ⚠️ 搜尋關鍵字**只記有沒有用**、不記內容——搜尋框是自由輸入，把使用者打的字
+     原樣寫進稽核紀錄有不可控風險（可能貼進不該留存的字串）。類別與時間是結構化的
+     選項值，記下來沒有這個問題。 */
+  function auditFilterSummary() {
+    const parts = [];
+    const cat = AUDIT_CATEGORIES.find(function (c) { return c.value === auditState.cat; });
+    parts.push("類別=" + (auditState.cat === "all" ? "全部" : (cat ? cat.label : auditState.cat)));
+    if (auditState.range === "custom") {
+      parts.push("時間=" + (auditState.customStart && auditState.customEnd
+        ? auditState.customStart + "~" + auditState.customEnd : "自訂（未選完整區間）"));
+    } else {
+      const r = AUDIT_RANGES.find(function (x) { return x.value === auditState.range; });
+      parts.push("時間=" + (r ? r.label : auditState.range));
+    }
+    parts.push("關鍵字搜尋=" + (auditState.search.trim() ? "有" : "無"));
+    return parts.join("、");
+  }
+
+  let auditExporting = false;   // 防重複點擊
+  function runAuditExport() {
+    if (auditExporting) return;
+    const list = filteredAudit();   // ⚠️ 完整篩選結果，不是當前分頁（pagedAudit）
+    if (list.length === 0) { showToast("目前條件下沒有可匯出的紀錄", "error"); return; }
+
+    auditExporting = true;
+    syncAuditExportBtn();
+
+    /* ⚠️ 實際產檔與錯誤處理待正式開發：這裡用 setTimeout 模擬「送出請求→後端產檔」的
+       等待，正式版換成真的呼叫後端匯出 API，並依回傳結果決定成功／失敗。
+       原型要測失敗路徑時在網址加 ?exportfail=1（不用亂數，否則每次點都可能失敗很難測）。 */
+    const forceFail = new URLSearchParams(location.search).get("exportfail") === "1";
+    setTimeout(function () {
+      auditExporting = false;
+      syncAuditExportBtn();
+
+      if (forceFail) {
+        showToast("操作失敗，請稍後再試", "error");
+        return;
+      }
+
+      downloadCsv("操作紀錄_" + drISO(new Date(AUDIT_BASE)) + ".csv", auditToCsv(list));
+
+      /* 【不留個資】只記事件本身：筆數與篩選條件，不記任何一列的內容。
+         注意這筆紀錄是在匯出**之後**才產生的，所以剛匯出的那個檔案裡不會有它——
+         這是正確的時序，不是漏記。 */
+      addAuditEntry({
+        cat: "data", action: "匯出操作紀錄", target: null,
+        desc: "匯出 " + list.length + " 筆（" + auditFilterSummary() + "），不記錄匯出內容"
+      });
+
+      showToast("已匯出 " + list.length + " 筆操作紀錄");
+      // 重畫列表，讓剛才那筆「匯出操作紀錄」出現在畫面上（稽核的透明性）
+      refreshAuditList();
+    }, 600);
+  }
+
+  // 匯出中要 disabled 並改文字（防重複點擊；checklist 的「提交中」要求）
+  function syncAuditExportBtn() {
+    const btn = document.getElementById("btnAuditExport");
+    if (!btn) return;
+    btn.disabled = auditExporting;
+    btn.innerHTML = icon("upload") + (auditExporting ? "匯出中…" : "匯出");
+  }
+
+  // customStart / customEnd：range === "custom" 時才有意義，格式是 ISO "YYYY-MM-DD"
+  // （跟 DateRangePicker 對外的格式一致，不存 Date 物件）
+  const auditState = { search: "", cat: "all", range: "30d", page: 1, pageSize: PAGE_SIZE_DEFAULT, customStart: null, customEnd: null };
+  // 區間選項：預設區間用 Dropdown；「自訂範圍」用共用的 DateRangePicker 元件
+  // （2026-08-17 補上，這階段是原生日期欄位、未來可整顆換成月曆面板）
   const AUDIT_RANGES = [
     { value: "today", label: "今天" },
     { value: "7d", label: "近 7 天" },
     { value: "30d", label: "近 30 天" },
     { value: "90d", label: "近 90 天" },
-    { value: "all", label: "全部時間" }
+    { value: "all", label: "全部時間" },
+    // 2026-08-17：選了這個才會在篩選列展開 DateRangePicker（共用元件）
+    { value: "custom", label: "自訂範圍" }
   ];
 
   function auditTimeOf(e) { return new Date(AUDIT_BASE - e.min * 60000); }
@@ -4377,6 +4660,13 @@
       if (auditState.cat !== "all" && e.cat !== auditState.cat) return false;
       if (auditState.range === "today") {
         if (auditTimeOf(e).toDateString() !== today) return false;
+      } else if (auditState.range === "custom") {
+        /* 自訂區間（含頭含尾）。還沒選完整區間時不過濾——使用者剛切到「自訂範圍」
+           但日期還沒填，不該看到空列表。 */
+        if (auditState.customStart && auditState.customEnd) {
+          const d = drISO(auditTimeOf(e));
+          if (d < auditState.customStart || d > auditState.customEnd) return false;
+        }
       } else if (auditState.range !== "all") {
         const days = parseInt(auditState.range, 10);
         if (e.min > days * 24 * 60) return false;
@@ -4413,11 +4703,64 @@
       onChange: function (v) { auditState.cat = v; auditState.page = 1; refreshAuditList(); }
     });
     html += renderDropdown("auditRangeFilter", AUDIT_RANGES, auditState.range, {
-      onChange: function (v) { auditState.range = v; auditState.page = 1; refreshAuditList(); }
+      onChange: function (v) {
+        auditState.range = v;
+        auditState.page = 1;
+        /* 切離「自訂範圍」時把日期清掉：留著會造成「下拉顯示近 7 天、但心裡以為
+           自訂的日期還在生效」的困惑。整條篩選列要重畫（自訂欄位要出現／消失），
+           所以走 refreshAuditFilterBar() 而不是只 refreshAuditList()。 */
+        if (v !== "custom") { auditState.customStart = null; auditState.customEnd = null; }
+        refreshAuditFilterBar();
+        refreshAuditList();
+      }
     });
+    // 只有選了「自訂範圍」才展開日期區間欄位（共用的 DateRangePicker 元件）
+    if (auditState.range === "custom") {
+      html += renderDateRange("auditDateRange",
+        { start: auditState.customStart, end: auditState.customEnd },
+        {
+          max: drISO(new Date(AUDIT_BASE)),   // 不能選未來：稽核紀錄不會有未來的事件
+          onChange: function (v) {
+            auditState.customStart = v.start;
+            auditState.customEnd = v.end;
+            auditState.page = 1;
+            refreshAuditList();
+          }
+        });
+    }
     // 2026-08-14：筆數從這裡移到底部分頁列（跟每頁筆數選單、分頁器集中在同一條線，語意一致）
+    /* 匯出鈕靠右（spacer 推開），位置比照子帳號管理頁把動作鈕放篩選列右側的慣例。
+       icon 用 upload（箭頭向上＝資料離開系統），跟匯入用 download（向下＝帶進系統）
+       形成對稱——沿用 2026-08-13 定的方向感邏輯，不是隨手挑的。
+       權限：這一頁本身就只有企業管理員進得來（PERM_MATRIX 的「操作紀錄」是 companyAdmin，
+       側欄已過濾），所以按鈕不用再判斷一次身份。 */
+    html += '<div class="filter-bar-spacer"></div>';
+    html += '<button class="btn btn-secondary" id="btnAuditExport">' + icon("upload") + '匯出</button>';
     html += '</div>';
     return html;
+  }
+
+  /* 篩選列自己重畫（自訂日期欄位要跟著「範圍」下拉出現／消失）。
+     重畫後 dropdown 與日期欄位都是新節點，事件要重綁。 */
+  function refreshAuditFilterBar() {
+    const wrap = document.getElementById("auditFilterWrap");
+    if (!wrap) return;
+    wrap.innerHTML = renderAuditFilterBar();
+    bindAuditFilterBar();
+  }
+  function bindAuditFilterBar() {
+    const searchEl = document.getElementById("auditSearch");
+    if (searchEl) searchEl.addEventListener("input", function () {
+      auditState.search = this.value; auditState.page = 1; refreshAuditList();
+    });
+    ddBind("auditCatFilter");
+    ddBind("auditRangeFilter");
+    if (auditState.range === "custom") drBind("auditDateRange");
+    const exportBtn = document.getElementById("btnAuditExport");
+    if (exportBtn) {
+      exportBtn.addEventListener("click", runAuditExport);
+      syncAuditExportBtn();   // 篩選列重畫時要還原匯出中的狀態
+    }
   }
 
   function renderAuditList() {
@@ -4470,7 +4813,8 @@
        Alvie 決定拿掉——這件事他會在報告時口頭講，畫面上不用再佔一塊版面。
        表格下方只留保存期限那行灰字（那是產品規格，不是原型註記，兩者性質不同）。 */
     let html = '<div class="page-head"><h1>操作紀錄</h1></div>';
-    html += renderAuditFilterBar();
+    // 包一層 wrap：切換「自訂範圍」時要能只重畫篩選列（日期欄位要出現／消失）
+    html += '<div id="auditFilterWrap">' + renderAuditFilterBar() + '</div>';
     html += '<div id="auditListWrap">' + renderAuditList() + '</div>';
     const years = Math.round(AUDIT_RETENTION_DAYS / 365 * 10) / 10;
     html += '<div class="audit-retention">' + icon("history") +
@@ -4490,21 +4834,18 @@
     const clearBtn = document.getElementById("btnClearAuditFilters");
     if (clearBtn) clearBtn.addEventListener("click", function () {
       auditState.search = ""; auditState.cat = "all"; auditState.range = "all"; auditState.page = 1;
-      const searchEl = document.getElementById("auditSearch");
-      if (searchEl) searchEl.value = "";
-      ddSetValue("auditCatFilter", "all", { silent: true });
-      ddSetValue("auditRangeFilter", "all", { silent: true });
+      // 自訂日期也要一起清掉（否則清除篩選後 range 變 all、但日期還留在 state 裡）
+      auditState.customStart = null; auditState.customEnd = null;
+      // 篩選列整條重畫：range 從 custom 變回 all 時，日期欄位要消失
+      refreshAuditFilterBar();
       refreshAuditList();
     });
     bindPagerBar("#auditListWrap", { ddId: "auditPageSize", st: auditState, refresh: refreshAuditList });
   }
   function wireAuditPage() {
-    const searchEl = document.getElementById("auditSearch");
-    if (searchEl) searchEl.addEventListener("input", function () {
-      auditState.search = this.value; auditState.page = 1; refreshAuditList();
-    });
-    ddBind("auditCatFilter");
-    ddBind("auditRangeFilter");
+    // 篩選列的事件綁定統一收在 bindAuditFilterBar()（重畫篩選列時會再呼叫一次），
+    // 不要在這裡另寫一份，否則兩處會對不上
+    bindAuditFilterBar();
     bindAuditListButtons();
   }
 
@@ -4599,11 +4940,20 @@
     showToast("已登出（示意）");
   });
 
-  // ---- toast（全站共用，成功訊息一律用這個 —— icon 用系統既有的 check，不是自訂） ----
+  /* ---- toast（全站共用）----
+     showToast(msg)            成功（預設，既有 13 個呼叫點都走這個，不用改）
+     showToast(msg, "error")   系統失敗（網路／逾時／伺服器出錯，跟表單欄位驗證錯誤不同層級）
+     2026-08-17 加上 error 態，對齊 Figma 的 Toast component（State=Success／Error）。
+     卡片本體兩態完全相同，只換 icon 與 icon 顏色。 */
   let toastTimer = null;
-  function showToast(msg) {
+  function showToast(msg, type) {
     const t = document.getElementById("toast");
-    t.innerHTML = icon("check") + "<span>" + escAttr(msg) + "</span>";
+    const isError = type === "error";
+    // 每次都重設 class，避免上一次的 is-error 殘留到下一則成功訊息
+    t.className = "toast" + (isError ? " is-error" : "");
+    t.innerHTML = icon(isError ? "xToast" : "check") + "<span>" + escAttr(msg) + "</span>";
+    // 重設完 class 才加 show，否則 transition 不會跑
+    void t.offsetWidth;
     t.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove("show"); }, 3500);
