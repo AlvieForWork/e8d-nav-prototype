@@ -1,0 +1,9 @@
+# macOS Finder 每個資料夾都會產生的隱藏檔，跟專案無關
+.DS_Store
+
+# 驗收用的截圖（Playwright／CDP 實測時產生的），不進版控
+*.png
+
+# 匯入功能的測試檔：正式範例檔是 assets/account_import.xlsx，
+# test- 開頭的都是驗證用的假資料（含刻意做壞的檔案），留在本機就好
+test-*.xlsx
