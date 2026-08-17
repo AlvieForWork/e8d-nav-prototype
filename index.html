@@ -106,7 +106,12 @@
   button { font-family: inherit; font-size: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .shell { display: flex; min-height: 100vh; position: relative; }
+  /* 2026-08-14：min-height → height + overflow:hidden。
+     原本用 min-height 的話，右側表格一長，整個 shell 就跟著長高，左右兩欄共用同一個
+     文件流：側欄被撐成跟文件一樣高，帳號卡的 margin-top:auto 就被推到整份文件的最底部
+     （Alvie 反映「帳號卡跟著表格跑到頁面最下面」）。鎖成一個視窗高之後，
+     .sidebar 與 .content 各自的 overflow-y:auto 才會真正生效、變成兩條獨立的捲軸 */
+  .shell { display: flex; height: 100vh; overflow: hidden; position: relative; }
 
   /* ---------- Sidebar ---------- */
   .sidebar {
@@ -116,7 +121,8 @@
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    /* 側欄本身不捲：捲動的是裡面的 .nav-scroll，帳號卡固定釘在欄底 */
+    overflow: hidden;
     transition: width .12s ease-out;
   }
   .sidebar.collapsed {
@@ -130,12 +136,20 @@
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
+  /* 選單區吃掉剩餘高度並自己捲動（min-height:0 才縮得下去）；
+     選單項目多到超過一個視窗時，捲的是這一區，帳號卡不會被推走 */
   .nav-scroll { padding: 16px 14px 20px; display: flex; flex-direction: column; gap: 4px;
+    flex: 1; min-height: 0; overflow-y: auto;
     transition: opacity .08s ease; }
-  .points-card, .sidebar-hint { transition: opacity .08s ease; }
+  /* 選單項目與展開的子選單一律不壓縮：空間不夠時要讓 .nav-scroll 出現捲軸，
+     而不是把每一項擠扁。少了這行，展開的子選單會從 148px 被壓成 81px，
+     最後一項（操作紀錄）直接看不見 */
+  .nav-scroll > * { flex-shrink: 0; }
+  /* flex-shrink: 0 — 側欄高度不夠時不准壓縮帳號卡。
+     少了它，帳號卡會被 flex 擠扁，卡片 overflow:hidden 會把底部的「儲值」鈕裁掉 */
+  .points-card { flex-shrink: 0; transition: opacity .08s ease; }
   .sidebar.collapsed .nav-scroll,
-  .sidebar.collapsed .points-card,
-  .sidebar.collapsed .sidebar-hint { opacity: 0; }
+  .sidebar.collapsed .points-card { opacity: 0; }
 
   /* ---------- topbar 品牌區（收合鈕常駐；logo＋分隔線只在側欄收合時才出現） ---------- */
   .topbar-brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
@@ -307,14 +321,11 @@
   .points-card .pc-topup:hover::before { left: 0; }
   .points-card .pc-topup:active { transform: scale(.94); }
 
-  .sidebar-hint {
-    padding: 12px 16px 16px;
-    font-size: var(--fs-caption);
-    color: var(--text-muted);
-  }
 
   /* ---------- Topbar ---------- */
-  .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  /* min-height: 0 — 讓 .content 這個 flex 子項可以縮到比內容小，內部捲軸才成立
+     （flex item 預設 min-height:auto 會頂住內容高度，捲軸會失效） */
+  .main-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .topbar {
     height: 68px;
     flex-shrink: 0;
@@ -418,6 +429,12 @@
     background: var(--surface); border-radius: var(--radius-xl); padding: 22px 24px;
     box-shadow: var(--shadow-card);
     display: flex; flex-direction: column; justify-content: space-between;
+    /* 2026-08-14：卡片內是「圖示貼上緣、數字貼下緣」，中間那段呼吸空間是被撐出來的，
+       所以高度會跟著同列最高的卡片跑——合約摘要卡切到「無合約」少一行就縮到 204，
+       KPI 卡跟著縮，那段空間歸零、圖示直接黏著文字。給一個地板值讓它不隨鄰居忽高忽低。
+       240 取自「有合約」時的實際高度(242)並收進 4px grid；比 1280 的自然高度(244)小，
+       所以窄螢幕不受影響、不會硬撐出多餘空白 */
+    min-height: 240px;
   }
   .stat-card .s-icon {
     width: 48px; height: 48px; border-radius: 14px; background: var(--accent-soft);
@@ -432,6 +449,15 @@
   .stat-card .s-delta.down { color: #EC2D30; background: #FFEBEE; }
   .stat-card .s-delta .ico { width: 10px; height: 10px; }
   .stat-card .s-compare { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 8px; }
+  /* 1366 以下：「本月總發送量」的 12,480 加上漲跌徽章，實測只差 1px 就會把徽章擠到下一行，
+     變成兩張 KPI 卡一張同行、一張換行（Alvie 2026-08-14 指出）。收緊 gap（10→8，順便回到
+     4px grid）與徽章左右內距，把那 1px 讓出來，窄螢幕兩張卡才會長得一樣。
+     ⚠️ 只在 1366 以下套用——1440 是主要驗收寬度，那裡空間有 37px 餘裕、不需要動，
+     KPI 卡在 1440 維持與 commit 6161b67 完全相同的規格 */
+  @media (max-width: 1366px) {
+    .stat-card .s-row { gap: var(--spacing-sm); }
+    .stat-card .s-delta { padding: 3px 6px; }
+  }
 
   .chart-card { background: var(--surface); border-radius: var(--radius-xl); padding: 24px 24px 20px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; }
   .chart-card .cc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -504,7 +530,12 @@
   .bar-mark:hover path, .bar-mark:focus path { opacity: .78; }
   .bar-mark:focus { outline: none; }
 
-  .contract-card { background: var(--surface); border-radius: var(--radius-xl); padding: 24px; box-shadow: var(--shadow-card); }
+  /* flex column：三張卡等高是前提，所以少一行的「費率摘要」版不能靠縮高度解決，
+     改讓下方的費率列吸收多出來的空間（見 .contract-rows），底部才不會空一塊 */
+  .contract-card {
+    background: var(--surface); border-radius: var(--radius-xl); padding: 24px; box-shadow: var(--shadow-card);
+    display: flex; flex-direction: column;
+  }
   .contract-card h3 { font-size: var(--fs-subhead); line-height: var(--lh-subhead); font-weight: 700; margin: 0 0 6px; color: var(--text); }
   .contract-card .cc-sub { font-size: var(--fs-caption); color: var(--text-muted); margin: 0; }
   /* 標題區：左邊標題＋說明句，右邊「查看完整費率」，左右各據一端不會重疊。
@@ -514,8 +545,14 @@
     gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);
   }
   .cc-head-row .cc-head-text { min-width: 0; }
-  /* padding 10px→8px(sm)：刪掉「計費方式」那行之後順勢把列距收緊，卡片整體變矮 */
-  .contract-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--spacing-md); padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--border); font-size: var(--fs-caption); }
+  /* 費率列的容器：吃掉標題區以外的所有剩餘高度，再由各列平分。
+     「合約摘要」有 3 列、剛好填滿，沒有剩餘空間可分，所以維持原樣不受影響；
+     「費率摘要」只有 2 列，多出來的高度就被這兩列平均吸收，不會全擠在上半部 */
+  .contract-rows { flex: 1; display: flex; flex-direction: column; }
+  /* padding 10px→8px(sm)：刪掉「計費方式」那行之後順勢把列距收緊，卡片整體變矮。
+     flex: 1 讓每一列等分容器高度；align-items: center 讓列變高時文字待在列的正中央
+     （各列都是單行、同字級，在沒有多餘空間時 center 與原本的 baseline 結果相同） */
+  .contract-row { flex: 1; display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--border); font-size: var(--fs-caption); }
   .contract-row:last-child { border-bottom: none; padding-bottom: 0; }
   .contract-row dt { margin: 0; color: var(--text-muted); }
   .contract-row dd { margin: 0; color: var(--text); font-weight: 600; text-align: right; }
@@ -547,14 +584,16 @@
      ============================================================ */
 
   /* ---- 通用按鈕（此檔案先前沒有按鈕元件，比照 E8D Button 規格：Primary/Secondary/Text/Danger-text） ---- */
+  /* gap 6→8（--spacing-sm）：對齊 Figma Button 元件的 itemSpacing 8（2026-08-14 核對） */
   .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    display: inline-flex; align-items: center; justify-content: center; gap: var(--spacing-sm);
     height: 36px; padding: 0 16px; border-radius: var(--radius-md);
     font-family: var(--font-ui); font-size: var(--fs-body); font-weight: 600; cursor: pointer;
     border: 1px solid transparent; white-space: nowrap; flex-shrink: 0;
     transition: background .12s ease, border-color .12s ease, color .12s ease;
   }
-  .btn .ico { width: 15px; height: 15px; }
+  /* 15→16：對齊 Figma Button（Medium 的 icon 是 16；Small 14／Large 18） */
+  .btn .ico { width: 16px; height: 16px; }
   .btn-sm { height: 32px; padding: 0 12px; font-size: var(--fs-body); }
   .btn-primary { background: var(--accent); color: var(--accent-contrast); }
   .btn-primary:hover { background: var(--accent-hover); }
@@ -569,7 +608,13 @@
   .btn-danger { background: #EC2D30; color: #fff; }
   .btn-danger:hover { background: #D8262B; }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
-  .btn:disabled:hover { background: inherit; }
+  /* ⚠️ 2026-08-14 修正：原本是 `.btn:disabled:hover { background: inherit }`，
+     inherit 會去拿「父層」的背景（modal 是白底），所以橘色主按鈕一 hover 就變成
+     白底白字、整顆看起來消失。disabled 的按鈕 hover／active 一律維持原本外觀，
+     只靠 opacity .5 + not-allowed 游標表達「不能按」。 */
+  .btn-primary:disabled:hover, .btn-primary:disabled:active { background: var(--accent); }
+  .btn-secondary:disabled:hover, .btn-secondary:disabled:active { background: var(--surface); border-color: var(--border); }
+  .btn-danger:disabled:hover, .btn-danger:disabled:active { background: #EC2D30; }
 
   /* ============================================================
      自訂 Dropdown（2026-08-11 第三輪，取代原本的原生 <select>）
@@ -722,7 +767,9 @@
      「誰 做了什麼」，兩個都是主體，只強調其一反而讀不出重點。字重仍是既有的 600，
      沒有新增字重階，差異只在「哪些欄位套用」。 */
   .audit-id { font-weight: 600; }
-  .data-table td.audit-desc { color: var(--text-muted); font-size: var(--fs-small); line-height: var(--lh-small); }
+  /* 2026-08-14：說明欄從 Small 14 拉回 Body 16，跟表格其他資料欄同一階（Alvie 定）。
+     同一列裡混兩個字級，說明欄看起來會矮一截。只保留次要灰的顏色差異。 */
+  .data-table td.audit-desc { color: var(--text-muted); }
   /* 類別欄刻意不上色：四個類別各配一個顏色等於發明四種不存在的語意，紅色也會被誤讀成危險 */
   .audit-act { display: inline-flex; align-items: baseline; gap: 7px; font-weight: 600; color: var(--text); }
   .audit-act .alert-dot { width: 6px; height: 6px; border-radius: 50%; background: #EC2D30; flex-shrink: 0; position: relative; top: -2px; }
@@ -776,7 +823,6 @@
   }
 
   /* ---- 部門頁：主管儲存格（名字＋指派連結）---- */
-  .manager-cell { display: inline-flex; align-items: center; gap: var(--spacing-sm); }
 
   /* ---- 部門頁：刪除被停用時的就地說明（2026-08-14 第二版）----
      第一版放在表格最底部一條常駐訊息，位置跟 hover 的那一列對不起來（滑到哪一列都在同一個地方，
@@ -785,6 +831,8 @@
      不用 tooltip：① 專案不走 tooltip 這條路 ② disabled 的 <button> 不會發出滑鼠事件，
      hover 監聽必須掛在外層的 td.col-actions 上才收得到。
      底色用 var(--bg)（跟表格列 hover 同一個色），讓說明在視覺上跟它所屬的那一列是一組。 */
+  /* 觸發區＝緊貼「刪除」按鈕本身（不是整個操作欄），滑鼠靠到按鈕上才出現說明 */
+  .del-hint-zone { display: inline-flex; }
   .dept-note-row > td { background: var(--bg); padding: 10px var(--spacing-lg); }
   .dept-note-inner { display: flex; align-items: flex-start; gap: 6px; font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-muted); }
   .dept-note-inner .ico { width: 16px; height: 16px; color: var(--text-disabled); flex-shrink: 0; margin-top: 3px; }
@@ -851,8 +899,12 @@
      與其讓每一欄都被壓到換行，改成把 cell 左右 padding 從 16px 收到 12px
      （9 欄共省 72px），剩下的差額由 E-mail 欄吸收、換成兩行——
      這是刻意的取捨：短欄位優先保持單行，最長的 E-mail 才換行 */
+  /* 2026-08-14：操作紀錄表也套同一招——說明欄字級從 Small 14 拉回 Body 16 之後，
+     1280 下六欄需求合計 943px、比表格的 936px 多 7px。收 padding（6 欄共省 48px）
+     比讓說明欄為了 7px 換成兩行划算 */
   @media (max-width: 1366px) {
-    .acct-table th, .acct-table td { padding-left: var(--spacing-md); padding-right: var(--spacing-md); }
+    .acct-table th, .acct-table td,
+    .audit-table th, .audit-table td { padding-left: var(--spacing-md); padding-right: var(--spacing-md); }
   }
 
   /* ---- Tooltip：系統缺口，這裡先在原型定案方向（深底白字，跟 popover/dd-panel 的白底
@@ -987,6 +1039,112 @@
      跟內部元素，不另外做一套 modal。上傳區的虛線框沿用 .placeholder-card 的語言
      （dashed border + radius-lg），沒有發明新的圓角/陰影階 */
   .confirm-modal.is-wide { width: 480px; }
+  /* 匯入第二段「檢視名單」用的寬版：9 欄名單在 1440 下要放得開。
+     1280 視窗時 92vw = 1178px 仍大於 1100，所以不會被壓縮到爆版 */
+  /* 匯入第二／三段的寬版：1100 寬、最高 90vh。
+     用 max-height 不用固定 height——只有 3 筆時 modal 會自己縮小，不會留一大片空白；
+     筆數多時撐到 90vh 為止，名單自己捲。
+     整個 modal 是 flex column：標題／統計／footer 固定，中間的名單 flex:1 吃掉剩餘高度。 */
+  .confirm-modal.is-xwide {
+    width: 1100px; max-width: 92vw;
+    max-height: 90vh; display: flex; flex-direction: column;
+  }
+  .confirm-modal.is-xwide .cm-head,
+  .confirm-modal.is-xwide .import-summary,
+  .confirm-modal.is-xwide .cm-foot { flex-shrink: 0; }
+  /* min-height:0 不可省：flex 子項預設 min-height:auto，名單會被內容撐開、
+     整個 modal 就衝破 90vh，捲軸也不會出現在名單裡 */
+  .confirm-modal.is-xwide .import-list { flex: 1; min-height: 0; max-height: none; }
+
+  /* ---- 匯入：檔案層級錯誤（整份擋下，不進名單檢視）---- */
+  .file-error {
+    display: flex; align-items: flex-start; gap: 8px; margin-top: var(--spacing-lg);
+    padding: var(--spacing-md) var(--spacing-lg); border-radius: var(--radius-md);
+    background: #FFEBEE; color: #EC2D30;
+    font-size: var(--fs-small); line-height: var(--lh-small);
+  }
+  .file-error .ico { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; }
+  .file-error b { font-weight: 700; }
+
+  /* ---- 匯入：名單檢視 ---- */
+  .import-summary {
+    display: flex; align-items: center; gap: var(--spacing-sm);
+    margin: var(--spacing-lg) 0 var(--spacing-md);
+    font-size: var(--fs-body); line-height: var(--lh-body); color: var(--text);
+  }
+  .import-summary .is-ok { font-weight: 600; }
+  .import-summary .is-bad { color: #EC2D30; font-weight: 600; }
+  .import-summary .is-sep { color: var(--text-disabled); }
+  .import-summary .is-file { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: var(--fs-small); color: var(--text-muted); }
+  .import-summary .is-file .ico { width: 16px; height: 16px; color: var(--text-disabled); }
+
+  /* 名單本身沿用站內表格語言（table-layout:fixed＋百分比欄寬），只是包在 modal 裡、可捲動 */
+  .import-list { max-height: 50vh; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .import-list table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--fs-body); line-height: var(--lh-body); }
+  .import-list th {
+    position: sticky; top: 0; z-index: 1; text-align: left; background: var(--surface-2);
+    font-size: var(--fs-body-lg); line-height: var(--lh-body-lg); font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .03em; padding: 10px var(--spacing-md);
+    border-bottom: 1px solid var(--border); white-space: normal;
+  }
+  .import-list td { padding: 10px var(--spacing-md); border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; overflow-wrap: anywhere; }
+  /* 值最多顯示兩行就截斷：「姓名超過 50 字」這種違規值原本會把整列撐到 359px、
+     一列就吃掉大半個名單。這一段的任務是「辨識哪幾列有問題」，不是閱讀完整內容，
+     所以截斷是刻意的取捨（錯誤原因欄不截，那才是要看的重點） */
+  .import-list .cell-val {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .import-list tr:last-child td { border-bottom: none; }
+  /* 有錯的列整列淡紅底，一眼分得出哪幾列匯不進去 */
+  .import-list tr.is-invalid td { background: #FFF5F5; }
+  .import-list .err-text { color: #EC2D30; font-size: var(--fs-small); line-height: var(--lh-small); }
+  .import-list .empty-val { color: var(--text-disabled); }
+  /* 「可匯入 0 筆」時的整份提示：所有列都有格式錯誤，不讓它空跑一輪匯入 */
+  .import-blocked {
+    display: flex; align-items: flex-start; gap: 8px;
+    margin: var(--spacing-lg) 0 var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg); border-radius: var(--radius-md);
+    background: #FFEBEE; color: #EC2D30;
+    font-size: var(--fs-small); line-height: var(--lh-small);
+  }
+  .import-blocked .ico { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; }
+  .import-blocked b { font-weight: 700; }
+
+  /* 匯入中：逐筆處理的狀態欄 */
+  .import-list .state-wait { color: var(--text-disabled); font-size: var(--fs-small); }
+  .import-list .state-run { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-size: var(--fs-small); font-weight: 600; }
+  .spinner {
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid var(--accent-soft); border-top-color: var(--accent);
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+  /* 進度列：左邊「正在匯入中 (X/Y)」、右邊停止鈕 */
+  .import-progress { display: flex; align-items: center; gap: var(--spacing-md); font-size: var(--fs-body); color: var(--text); }
+  .import-progress .ip-num { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* 結果頁的逐列狀態：成功綠勾／失敗紅叉，沿用系統既有的 success / error 色 */
+  .import-list .col-state { white-space: nowrap; }
+  .import-list .state-ok, .import-list .state-fail { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-small); font-weight: 600; }
+  .import-list .state-ok { color: #0C9D61; }
+  .import-list .state-fail { color: #EC2D30; }
+  .import-list .state-ok .ico, .import-list .state-fail .ico { width: 15px; height: 15px; }
+  /* 其他欄位靠上對齊（長內容才好讀），但叉叉要在該列正中間——
+     列因為換行變高時，靠上的叉叉會貼在上緣、看起來沒對齊 */
+  .import-list .col-x { text-align: right; vertical-align: middle; }
+  /* 「列」欄＝Excel 的實際列號，是給使用者回去改檔用的次要資訊：
+     用 Small 字級＋次要灰壓低，數字用 tabular-nums 對齊 */
+  .import-list .col-no {
+    color: var(--text-muted); font-size: var(--fs-small); line-height: var(--lh-small);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .row-remove {
+    width: 28px; height: 28px; border: none; background: none; border-radius: var(--radius-md);
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted);
+  }
+  .row-remove:hover { background: var(--bg); color: var(--text); }
+  .row-remove .ico { width: 16px; height: 16px; }
   .confirm-modal .cm-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
   .confirm-modal .cm-head h3 { margin: 0; }
   .dropzone {
@@ -1033,14 +1191,9 @@
   .inline-edit button.confirm { color: #0C9D61; }
   .inline-edit button.confirm:hover { background: #E5F5EC; }
   .inline-edit button.cancel:hover { background: var(--surface-2); color: var(--text); }
-  .manager-select { width: 150px; }
 
-  /* ---- TODO／待 PM 確認標記 ---- */
-  .todo-tag {
-    display: inline-flex; align-items: center; font-size: var(--fs-caption); font-weight: 700; padding: 2px 8px;
-    border-radius: var(--radius-full); background: var(--phase2-soft); color: var(--phase2);
-    vertical-align: middle; margin-left: 6px; letter-spacing: .02em; white-space: nowrap;
-  }
+  /* 2026-08-14：.todo-tag（橘色 TODO 小標籤）已刪除——畫面上不再出現任何 TODO 標註，
+     那些「行為示意／待 PM 確認」的限制改用程式碼註解記錄、口頭向工程師說明 */
 
   /* ---- Demo 身份切換列（純原型工具，不是產品功能；正式版整個移除）
      沿用登入前流程已定案的「深色圓角藥丸狀態切換器」樣式，
@@ -1134,7 +1287,6 @@
       <div class="pc-bar"><span></span></div>
       <button class="pc-topup" id="btnTopup"><span>儲值</span></button>
     </div>
-    <div class="sidebar-hint">平台不留存聯絡人名單</div>
   </aside>
 
   <div class="main-col">
@@ -1255,7 +1407,29 @@
     '</defs>' +
   '</svg>';
 
-  // ---- 全站圖示統一使用 Lucide（viewBox 24、stroke-width 2）----
+  /* ---- 全站圖示統一使用 Lucide（viewBox 24、stroke-width 2）----
+   *
+   * ★ icon 光學對齊規則（2026-08-14 定案，設計系統層級，全站生效）
+   *
+   *   內容型 icon 的圖形一律填滿 viewBox 的 75%（= 24 座標系裡的 18 單位，
+   *   通常是 3 → 21）。新增 icon 時先用 getBBox 量填充率，不足就把路徑改寫到 18 單位，
+   *   不要靠改 CSS 的 width/height 補救——那會連 stroke 粗細一起放大，破壞線條一致性。
+   *
+   *   為什麼要這條規則：Lucide 的幾何類簡單圖示（plus、x、minus）畫得比帶輪廓的
+   *   複雜圖示（download、trash、search）小，plus 只有 14/24（58%）而 download 是
+   *   18/24（75%）。兩者在同一排按鈕上並列時，plus 實際只有 9.3px 而 download 有 12px，
+   *   小了 29%，肉眼很明顯（Alvie 2026-08-14 指出）。外框都是 16px 也救不了，
+   *   因為差在圖形本身的畫法。
+   *
+   *   ⚠️ 例外：方向指示類的 chevron（chevRight／chevDown／chevLeft／chevsLeft／
+   *   chevsRight）維持 Lucide 原生的 12 單位（50%）。它們是附屬在文字旁邊的次要指示，
+   *   不是獨立的內容圖示，放大到 75% 會讓側欄、下拉選單、分頁列的箭頭變得過重。
+   *
+   *   目前仍低於 75%、但因為所在元件另有規格而暫未調整的：
+   *   x(50%)、check(67%)、minus(58%)、up/down(58%)。前三者分別由 Figma 的
+   *   Checkbox／Modal 元件定義尺寸，後兩者在 10px 的 KPI 徽章裡，要動都得連同
+   *   該元件的規格一起重新裁定。
+   */
   const ICONS = {
     home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
@@ -1273,7 +1447,10 @@
     down: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
     search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
     x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
-    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    /* 2026-08-14 光學對齊：Lucide 原始的 plus 只佔 viewBox 14/24（58%），
+       跟 download/trash 這類 18/24（75%）的圖示並排時明顯小一截（實測小 29%）。
+       改成 3→21 共 18 單位，填充率對齊 75%。詳見檔案上方「icon 光學對齊規則」 */
+    plus: '<path d="M3 12h18"/><path d="M12 3v18"/>',
     pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
     mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
@@ -1384,7 +1561,7 @@
        而且未來若變成三、四級距這張卡會撐爆，所以摘要一律只給起始價。 */
     contract: {
       yes: {
-        sub: "已簽約合約價，SMS／MMS 皆依用量分級距計價",
+        sub: "已簽約合約價，SMS／MMS 分級距計價",
         rows: [
           { label: "簡訊單價（SMS）", range: "1–1,000 則", value: "NT$0.85／則" },
           { label: "多媒體簡訊單價（MMS）", range: "1–1,000 則", value: "NT$3.5／則" },
@@ -1392,7 +1569,7 @@
         ]
       },
       no: {
-        sub: "未簽約，依現行牌價，SMS／MMS 皆依用量分級距計價",
+        sub: "未簽約，依牌價，SMS／MMS 分級距計價",
         rows: [
           { label: "簡訊單價（SMS）", range: "1–1,000 則", value: "NT$0.95／則" },
           { label: "多媒體簡訊單價（MMS）", range: "1–1,000 則", value: "NT$3.8／則" }
@@ -1513,7 +1690,11 @@
     search: "", deptFilter: "all", roleFilter: "all", statusFilter: "all", editingId: null, pendingConfirm: null,
     bulkMode: false, selectedIds: new Set(),
     // 匯入 modal 的兩個狀態：選到的檔案（只存檔名與大小，不解析內容）、是否已按下匯入
-    importFile: null, importDone: false
+    // 匯入流程狀態（2026-08-14 改成三段式）：
+    //   importStep: upload → review → result；leave = 中途要關閉時的離開確認
+    //   importRows: 第二段的名單（關閉 modal 就整份清掉，不留個資）
+    importStep: "upload", importFile: null, importFileRaw: null, importFileError: null, importRows: null,
+    importQueue: null, importCursor: 0, importStopped: false, importResult: null, importStepBeforeLeave: null
   };
 
   // ---- 儀表板圖表：手刻 SVG（零外部依賴），色彩已用 dataviz skill 的驗證腳本跑過 CVD 檢查 ----
@@ -1773,7 +1954,8 @@
           '<div class="cc-head-text"><h3>' + title + '</h3>' +
           '<div class="cc-sub">' + cData.sub + '</div></div>' +
           '<a class="contract-link" href="#">查看完整費率 →</a>' +
-        "</div>" + contractRows + "</div>";
+        "</div>" +
+        '<div class="contract-rows">' + contractRows + "</div></div>";
     }
 
     return '<div class="page-head"><h1>總覽</h1></div>' +
@@ -2655,8 +2837,7 @@
       // 只示意二次確認流程本身（見 openConfirm 上方註解）
       title = "批次刪除帳號"; body = "確定要刪除選取的 " + n + " 筆帳號嗎？此操作無法復原。";
       okLabel = "刪除"; okClass = "btn-danger";
-      extraHtml = '<div class="flag-note" style="margin-top:14px">' + icon("flag") +
-        '<div>刪除方式（硬刪除或改為停用）尚待 PM 確認，此為 UI 示意<span class="todo-tag">TODO</span></div></div>';
+      // 2026-08-14：畫面上的黃框 TODO（刪除方式待 PM 確認）已移除，改口頭說明，extraHtml 留空
     }
     const html = '<div class="confirm-modal"><h3>' + title + '</h3><p>' + body + '</p>' + extraHtml +
       '<div class="cm-foot"><button class="btn btn-secondary" id="confirmCancel">取消</button>' +
@@ -2718,95 +2899,741 @@
   //
   // 2026-08-13：欄位清單與代碼說明原本印在 modal 裡，Alvie 判斷這些資訊範例檔本身就會寫、
   // 印在畫面上是重複，已移除。**規格保留在上面這段註解**，之後產範例檔照這裡做。
+  //
+  // 2026-08-14 改版成三段式流程（參考自家 team+ Partner 的匯入形式，欄位／錯誤規則／視覺全部換成 E8D）：
+  //   ① 上傳 → ② 檢視名單（逐列顯示、標錯誤、可移除）→ ③ 結果（逐列成功/失敗）
+  // ⚠️ 解析與驗證為示意，實際待正式開發：畫面不會真的讀 Excel，第二段的名單是下面這份
+  //    固定假資料，用來示範每一種錯誤長什麼樣子。正式版由後端解析檔案並回傳同樣結構的列資料。
+  // 【不留個資】錯誤訊息只呈現辨識用的必要欄位；匯入完成後不保留整份名單（closeImportModal 會清掉），
+  //    寫入 Audit Log 時只記筆數與成功／失敗數，不記任何個資明細。
   // ============================================================
 
-  function renderImportBody() {
-    const f = orgState.importFile;
-    let html = '<div class="cm-head"><h3>匯入帳號</h3>' +
-      '<button class="drawer-close" id="importClose">' + icon("x") + '</button></div>';
-    html += '<p>上傳 Excel 檔案一次建立多筆子帳號。</p>';
+  /* ============================================================
+     最小 xlsx 讀取器（零外部依賴，2026-08-14）
+     xlsx 本質是 zip + XML，瀏覽器原生的 DecompressionStream('deflate-raw') 與 DOMParser
+     就足以解析，不必為了匯入掛一個 900KB 的 SheetJS——這支原型全站零 CDN 依賴，
+     CDN 掛掉時匯入功能會整個消失，不划算。
+     支援：標準 zip（stored / deflate）、sharedStrings、inlineStr。
+     不支援：zip64（>4GB）、加密檔案——帳號匯入不會遇到。
+     ============================================================ */
+  async function xlsxInflateRaw(bytes) {
+    const ds = new DecompressionStream("deflate-raw");
+    const stream = new Blob([bytes]).stream().pipeThrough(ds);
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  async function xlsxUnzip(buf, wanted) {
+    const dv = new DataView(buf);
+    const u8 = new Uint8Array(buf);
+    const u16 = function (o) { return dv.getUint16(o, true); };
+    const u32 = function (o) { return dv.getUint32(o, true); };
+    let eocd = -1;
+    for (let i = buf.byteLength - 22; i >= 0 && i > buf.byteLength - 65558; i--) {
+      if (u32(i) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd === -1) throw new Error("NOT_ZIP");
+    const count = u16(eocd + 10);
+    let p = u32(eocd + 16);
+    const out = {};
+    for (let n = 0; n < count; n++) {
+      if (u32(p) !== 0x02014b50) break;
+      const method = u16(p + 10);
+      const compSize = u32(p + 20);
+      const nameLen = u16(p + 28);
+      const extraLen = u16(p + 30);
+      const commentLen = u16(p + 32);
+      const localOffset = u32(p + 42);
+      const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nameLen));
+      if (wanted.indexOf(name) !== -1) {
+        // local header 的 filename／extra 長度可能跟 central directory 不同，要重讀
+        const dataStart = localOffset + 30 + u16(localOffset + 26) + u16(localOffset + 28);
+        const raw = u8.subarray(dataStart, dataStart + compSize);
+        out[name] = method === 0 ? raw : await xlsxInflateRaw(raw);
+      }
+      p += 46 + nameLen + extraLen + commentLen;
+    }
+    return out;
+  }
+  function xlsxParseXml(bytes) {
+    return new DOMParser().parseFromString(new TextDecoder().decode(bytes), "application/xml");
+  }
+  function xlsxSharedStrings(bytes) {
+    if (!bytes) return [];
+    const doc = xlsxParseXml(bytes);
+    return Array.prototype.map.call(doc.getElementsByTagName("si"), function (si) {
+      const ts = si.getElementsByTagName("t");
+      let out = "";
+      for (let i = 0; i < ts.length; i++) out += ts[i].textContent;
+      return out;
+    });
+  }
+  function xlsxColIndex(ref) {
+    let i = 0;
+    for (let k = 0; k < ref.length; k++) {
+      const c = ref.charCodeAt(k);
+      if (c >= 65 && c <= 90) i = i * 26 + (c - 64); else break;
+    }
+    return i - 1;
+  }
+  function xlsxParseSheet(bytes, shared) {
+    const doc = xlsxParseXml(bytes);
+    const rowEls = doc.getElementsByTagName("row");
+    const rows = [];
+    for (let i = 0; i < rowEls.length; i++) {
+      const cells = rowEls[i].getElementsByTagName("c");
+      const arr = [];
+      for (let j = 0; j < cells.length; j++) {
+        const c = cells[j];
+        const ref = c.getAttribute("r") || "";
+        const type = c.getAttribute("t");
+        let value = "";
+        if (type === "inlineStr") {
+          const ts = c.getElementsByTagName("t");
+          for (let k = 0; k < ts.length; k++) value += ts[k].textContent;
+        } else {
+          const v = c.getElementsByTagName("v")[0];
+          if (v) value = type === "s" ? (shared[parseInt(v.textContent, 10)] || "") : v.textContent;
+        }
+        const idx = ref ? xlsxColIndex(ref) : arr.length;
+        while (arr.length < idx) arr.push("");   // 補回 Excel 省略的空儲存格
+        arr[idx] = value;
+      }
+      rows.push(arr);
+    }
+    return rows;
+  }
+  // 只讀第一個工作表（範例檔的「帳號匯入清單」）；填錯工作表由標頭檢查擋下
+  async function readXlsxRows(arrayBuffer) {
+    const files = await xlsxUnzip(arrayBuffer, ["xl/sharedStrings.xml", "xl/worksheets/sheet1.xml"]);
+    const sheet = files["xl/worksheets/sheet1.xml"];
+    if (!sheet) throw new Error("NO_SHEET");
+    return xlsxParseSheet(sheet, xlsxSharedStrings(files["xl/sharedStrings.xml"]));
+  }
 
-    if (orgState.importDone) {
-      // ---- 狀態三：匯入結果（示意數字，不是真的解析出來的）----
-      html += '<div class="import-result">' +
-        '<div class="ir-cell ok"><div class="ir-num">8</div><div class="ir-label">成功</div></div>' +
-        '<div class="ir-cell fail"><div class="ir-num">2</div><div class="ir-label">失敗</div></div>' +
-        '</div>';
-      html += '<div class="flag-note" style="margin:16px 0 0">' + icon("flag") +
-        '<div>此為行為示意，數字非實際解析結果；失敗原因逐列回報待正式開發' +
-        '<span class="todo-tag">TODO</span></div></div>';
-      html += '<div class="cm-foot"><button class="btn btn-primary" id="importDone">完成</button></div>';
+  // ⚙️ 上限（config）：正式版應由後端設定
+  const IMPORT_MAX_ROWS = 200;      // 單一檔案最多幾列
+  const ACCOUNT_MAX_TOTAL = 50;     // 公司帳號總數上限
+
+  /* ============================================================
+     匯入驗證（2026-08-14 正式版）：真的解析上傳的 xlsx、逐列套規則。
+     規則完全依範例檔「欄位說明」那一頁，錯誤文案比照「新增帳號」表單的提示風格。
+     【不留個資】驗證只在記憶體裡做，錯誤訊息不帶出整列內容；
+     寫進 Audit Log 的只有筆數與成功／失敗數，沒有任何個資明細。
+     ============================================================ */
+  const IMPORT_HEADERS = ["帳號", "姓名", "部門", "角色", "密碼", "員工編號", "國碼", "行動電話", "電子信箱", "開啟國際簡訊", "啟用帳號"];
+
+  // Excel 常見的格式雜訊：數字欄被存成 "1.0"、前後空白、全形空白
+  function importCell(v) {
+    if (v === null || v === undefined) return "";
+    let t = String(v).replace(/\u3000/g, " ").trim();
+    if (/^\d+\.0+$/.test(t)) t = t.replace(/\.0+$/, "");   // 1.0 → 1
+    return t;
+  }
+  function importIsValidDial(dial) {
+    return COUNTRY_CODES.some(function (c) { return c.dial === dial; });
+  }
+  /* 台灣門號：Excel 常把開頭的 0 吃掉（0912345678 存成 912345678），兩種都要收。
+     其他國家原型階段先寬鬆檢查純數字 6～15 碼，正式版再按各國規則細分。 */
+  function importPhoneOk(dial, phone) {
+    if (dial === "886") return /^0?9\d{8}$/.test(phone);
+    return /^\d{6,15}$/.test(phone);
+  }
+  const IMPORT_PWD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
+  const IMPORT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  /* 單列驗證：回傳 { row, errs }；整列空白回傳 null（自動略過、不報錯）。
+     一列可能同時違反多條規則，全部收集起來顯示，使用者才不用修一次上傳一次。 */
+  function validateImportRow(cells, seenAccounts) {
+    const c = IMPORT_HEADERS.map(function (_, i) { return importCell(cells[i]); });
+    if (c.every(function (v) { return v === ""; })) return null;
+
+    const row = {
+      account: c[0], name: c[1], dept: c[2], role: c[3], password: c[4],
+      empNo: c[5], dial: c[6], phone: c[7], email: c[8], intlSms: c[9], enabled: c[10]
+    };
+    const errs = [];
+
+    // 帳號
+    if (!row.account) errs.push("帳號為必填");
+    else if (!/^[A-Za-z0-9]+$/.test(row.account)) errs.push("帳號請輸入英文字母或數字");
+    else if (row.account.length > 50) errs.push("帳號不可超過 50 字");
+    else if (ACCOUNTS.some(function (a) { return a.account.toLowerCase() === row.account.toLowerCase(); })) errs.push("帳號已存在");
+    else if (seenAccounts[row.account.toLowerCase()]) errs.push("檔案內有重複的帳號");
+    if (row.account) seenAccounts[row.account.toLowerCase()] = true;
+
+    // 姓名
+    if (!row.name) errs.push("姓名為必填");
+    else if (row.name.length > 50) errs.push("姓名不可超過 50 字");
+
+    // 部門：必須是系統裡已存在的部門
+    if (!row.dept) errs.push("部門為必填");
+    else if (row.dept.length > 15) errs.push("部門名稱不可超過 15 字");
+    else if (!DEPARTMENTS.some(function (d) { return d.name === row.dept; })) errs.push("指定的部門不存在");
+
+    // 角色：只收 0／1，企業管理員不可匯入
+    if (!row.role) errs.push("角色為必填");
+    else if (row.role !== "0" && row.role !== "1") errs.push("角色只能填 1（部門管理員）或 0（一般使用者）");
+
+    // 密碼
+    if (!row.password) errs.push("密碼為必填");
+    else if (!IMPORT_PWD_RE.test(row.password)) errs.push("密碼需 8～16 碼且含大小寫英文與數字");
+
+    // 員工編號（選填）
+    if (row.empNo && row.empNo.length > 50) errs.push("員工編號不可超過 50 字");
+
+    // 國碼＋行動電話
+    if (!row.dial) errs.push("國碼為必填");
+    else if (!importIsValidDial(row.dial)) errs.push("無效的國碼");
+    if (!row.phone) errs.push("行動電話為必填");
+    else if (row.dial && importIsValidDial(row.dial) && !importPhoneOk(row.dial, row.phone)) errs.push("手機格式錯誤");
+
+    // 電子信箱
+    if (!row.email) errs.push("電子信箱為必填");
+    else if (!IMPORT_EMAIL_RE.test(row.email)) errs.push("請輸入正確的 E-mail 格式");
+
+    // 兩個選填的數字欄：留空用預設值
+    if (row.intlSms === "") row.intlSms = "0";
+    else if (row.intlSms !== "0" && row.intlSms !== "1") errs.push("開啟國際簡訊只能填 1（開）或 0（關）");
+    if (row.enabled === "") row.enabled = "1";
+    else if (row.enabled !== "0" && row.enabled !== "1") errs.push("啟用帳號只能填 1（啟用）或 0（停用）");
+
+    row.err = errs.length ? errs.join("、") : null;
+    return row;
+  }
+
+  /* 整份檔案的處理：先檔案層級檢查（擋下就不進名單），再逐列驗證。
+     回傳 { fileError } 或 { rows }。 */
+  function buildImportRows(sheetRows) {
+    if (!sheetRows || sheetRows.length === 0) {
+      return { fileError: { title: "檔案沒有內容", detail: "這個檔案是空的，請下載範例檔後填寫再上傳。" } };
+    }
+    // 標頭比對：欄位名與順序都要跟範例檔一致
+    const head = (sheetRows[0] || []).map(importCell);
+    const headOk = IMPORT_HEADERS.every(function (h, i) { return head[i] === h; });
+    if (!headOk) {
+      return { fileError: {
+        title: "欄位標頭不符",
+        detail: "第一列的欄位名稱與範例檔不一致（應為：" + IMPORT_HEADERS.join("、") + "），請下載範例檔後依格式填寫，標頭請勿刪改。"
+      } };
+    }
+    const body = sheetRows.slice(1);
+    const seen = {};
+    const rows = [];
+    for (let i = 0; i < body.length; i++) {
+      const r = validateImportRow(body[i], seen);
+      if (!r) continue;      // null＝整列空白，自動略過
+      /* 記下在 Excel 裡的實際列號：標頭佔第 1 列，所以 body 的第 0 筆是第 2 列。
+         名單會依「可匯入置頂」重新排序，列號因此會跳號——那是刻意的，
+         使用者要的是「回 Excel 第幾列去改」，不是「這是第幾筆」。
+         整列空白被略過時列號也不會被壓縮，仍對得回原檔。 */
+      r.excelRow = i + 2;
+      rows.push(r);
+    }
+    if (rows.length === 0) {
+      return { fileError: { title: "檔案沒有資料", detail: "只有標頭沒有任何資料列，請填寫後再上傳。" } };
+    }
+    if (rows.length > IMPORT_MAX_ROWS) {
+      return { fileError: { title: "超過單次匯入上限", detail: "這個檔案有 " + rows.length + " 筆，單次最多 " + IMPORT_MAX_ROWS + " 筆，請分批匯入。" } };
+    }
+    /* 可匯入的排在最前面、有問題的集中在下方——使用者先確認要匯入誰，
+       要修的錯誤集中在一起看。sort 在現代瀏覽器是穩定排序，所以同一組內
+       仍維持檔案裡原本的列順序。 */
+    rows.sort(function (a, b) { return (a.err ? 1 : 0) - (b.err ? 1 : 0); });
+    const okCount = rows.filter(function (r) { return !r.err; }).length;
+    const remain = ACCOUNT_MAX_TOTAL - ACCOUNTS.length;
+    if (okCount > remain) {
+      return { fileError: {
+        title: "超過帳號數上限",
+        detail: "貴公司帳號上限為 " + ACCOUNT_MAX_TOTAL + " 個，目前已使用 " + ACCOUNTS.length + " 個，尚可新增 " + remain + " 個，但這份檔案有 " + okCount + " 筆可匯入。"
+      } };
+    }
+    return { rows: rows };
+  }
+
+  /* 上傳當下就能判斷的檔案層級錯誤（不必解析內容）。
+     欄位標頭、空資料、筆數上限、帳號數上限這幾種要讀完檔案才知道，
+     由 buildImportRows() 在解析後回報。 */
+  function detectFileLevelError(file) {
+    const name = (file.name || "").toLowerCase();
+    if (!/\.(xlsx|xls)$/.test(name)) {
+      return { title: "檔案格式不支援", detail: "請上傳 .xlsx 或 .xls 檔案。" };
+    }
+    if (file.size === 0) {
+      return { title: "檔案沒有內容", detail: "這個檔案是空的，請確認後重新上傳。" };
+    }
+    return null;
+  }
+
+  // 角色代碼 → 畫面文字；不合法的值原樣顯示，讓使用者看得出自己填了什麼
+  function importRoleLabel(v) {
+    if (v === "1") return "部門管理員";
+    if (v === "0") return "一般使用者";
+    return v;
+  }
+  /* 名單／結果頁的手機欄＝「+國碼 號碼」，跟匯入後實際存進系統的國際格式一致。
+     缺國碼或缺號碼時只顯示有填的那半，讓使用者一眼看出少了哪一段。 */
+  function importPhoneDisplay(r) {
+    if (!r.dial && !r.phone) return "";
+    if (!r.dial) return r.phone;
+    if (!r.phone) return "+" + r.dial;
+    return "+" + r.dial + " " + r.phone;
+  }
+
+  // 匯入中每一列的狀態格：等待／處理中（轉圈）／成功／失敗
+  function importStateCell(r) {
+    if (r.state === "done") return '<span class="state-ok">' + icon("check") + '成功</span>';
+    if (r.state === "failed") return '<span class="state-fail">' + icon("x") + '失敗</span>';
+    if (r.state === "processing") return '<span class="state-run"><span class="spinner"></span>處理中</span>';
+    return '<span class="state-wait">等待中</span>';
+  }
+
+  /* 逐筆寫入的模擬。
+     ⚠️ 實際寫入與錯誤處理待正式開發：這裡用 setTimeout 一筆一筆延遲，模擬打 API 的過程；
+     正式版換成真的逐筆（或分批）呼叫後端，並依回傳結果標記每一列。
+     兩種失敗刻意分開：
+       ① 格式失敗 —— 上傳後的格式檢查就抓出來了，根本不會進到這個佇列
+       ② 系統失敗 —— 格式沒問題、但寫入時網路／逾時／伺服器出錯，只可能發生在這一段
+     原型用隨機挑 1～2 筆標記成系統失敗來示範這個狀態。 */
+  const IMPORT_ROW_DELAY = 320;   // 每筆的模擬耗時（ms）
+
+  function startImportRun() {
+    const queue = (orgState.importRows || []).filter(function (r) { return !r.err; });
+    queue.forEach(function (r) { r.state = "wait"; r.sysFail = false; });
+    // 隨機挑 1～2 筆當系統失敗（筆數少時最多 1 筆），示範跟格式錯誤不同的失敗類型
+    const failCount = queue.length >= 5 ? 1 + Math.floor(Math.random() * 2) : (queue.length >= 2 ? 1 : 0);
+    const picked = {};
+    while (Object.keys(picked).length < failCount) picked[Math.floor(Math.random() * queue.length)] = true;
+    Object.keys(picked).forEach(function (i) { queue[i].sysFail = true; });
+
+    orgState.importQueue = queue;
+    orgState.importCursor = 0;
+    orgState.importStopped = false;
+    orgState.importStep = "importing";
+    paintImportModal();
+    // 立刻開始跑第一筆——原本等一個完整的 IMPORT_ROW_DELAY 才動，
+    // 進畫面會先看到整排「等待中」不動，像卡住
+    setTimeout(stepImportRun, 80);
+  }
+
+  // 只改動當前這一列的狀態格與底部進度，不整塊重畫（避免每筆都閃一下、捲動位置被重置）
+  function paintImportRow(i) {
+    const cell = document.getElementById("impState" + i);
+    if (cell) cell.innerHTML = importStateCell(orgState.importQueue[i]);
+    const prog = document.getElementById("impProgress");
+    if (prog) {
+      const q = orgState.importQueue;
+      const done = q.filter(function (r) { return r.state === "done" || r.state === "failed"; }).length;
+      prog.textContent = "(" + done + "/" + q.length + ")";
+    }
+  }
+
+  function stepImportRun() {
+    const q = orgState.importQueue || [];
+    const i = orgState.importCursor;
+    if (orgState.importStopped || i >= q.length) { finishImportRun(); return; }
+    q[i].state = "processing";
+    paintImportRow(i);
+    setTimeout(function () {
+      if (orgState.importStopped) { finishImportRun(); return; }
+      const r = q[i];
+      if (r.sysFail) {
+        r.state = "failed";
+        r.runErr = "匯入失敗，請重試";   // 系統失敗：跟格式錯誤分開的失敗原因
+      } else {
+        createAccountFromImportRow(r);
+        r.state = "done";
+      }
+      paintImportRow(i);
+      orgState.importCursor = i + 1;
+      setTimeout(stepImportRun, 60);
+    }, IMPORT_ROW_DELAY);
+  }
+
+  function createAccountFromImportRow(r) {
+    const dept = DEPARTMENTS.find(function (d) { return d.name === r.dept; });
+    const country = COUNTRY_CODES.find(function (c) { return c.dial === r.dial; });
+    // 台灣門號去掉開頭的 0 再存，跟表單建立的帳號格式一致（+886912345678）
+    const phone = r.dial === "886" ? r.phone.replace(/^0/, "") : r.phone;
+    ACCOUNTS.push({
+      id: "imp" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      status: r.enabled === "0" ? "disabled" : "active",
+      name: r.name, account: r.account,
+      deptId: dept ? dept.id : null,
+      role: r.role === "1" ? "deptManager" : "user",
+      empNo: r.empNo,
+      countryIso: country ? country.iso : "TW",
+      phone: phone, email: r.email,
+      intlSms: r.intlSms === "1"
+    });
+  }
+
+  function finishImportRun() {
+    const all = orgState.importRows || [];
+    const ok = all.filter(function (r) { return r.state === "done"; }).length;
+    /* 結果頁把成功的排在最前面，失敗的（系統失敗＋格式錯誤）跟在後面，
+       使用者一眼先看到「成功了幾筆」，要修的集中在下半部。 */
+    const sorted = all.slice().sort(function (a, b) {
+      // 成功置頂 → 失敗（系統失敗／格式錯誤）→ 中途停止未處理的排最後
+      const rank = function (r) {
+        if (r.state === "done") return 0;
+        if (r.runErr || r.err) return 1;
+        return 2;
+      };
+      return rank(a) - rank(b);
+    });
+    /* 【不留個資】Audit Log 只記筆數與成功／失敗數，沒有任何欄位內容 */
+    addAuditEntry({
+      cat: "data", action: "匯入帳號", target: null,
+      desc: "匯入 " + all.length + " 筆，成功 " + ok + " 筆、失敗 " + (all.length - ok) + " 筆" +
+            (orgState.importStopped ? "（中途停止）" : "")
+    });
+    orgState.importResult = { rows: sorted, ok: ok, stopped: orgState.importStopped };
+    orgState.importStep = "result";
+    paintImportModal();
+  }
+
+  function importValidRows() {
+    return (orgState.importRows || []).filter(function (r) { return !r.err; });
+  }
+
+  function renderImportBody() {
+    const st = orgState.importStep || "upload";
+
+    // ---- 離開確認：第二／三段中途要關閉時，先問一次再走（名單不會保留）----
+    if (st === "leave") {
+      return '<h3>要離開匯入嗎？</h3>' +
+        '<p>已上傳的名單不會保留，關閉後需要重新上傳檔案。</p>' +
+        '<div class="cm-foot"><button class="btn btn-secondary" id="leaveStay">繼續匯入</button>' +
+        '<button class="btn btn-danger" id="leaveConfirm">離開</button></div>';
+    }
+
+    const head = '<div class="cm-head"><h3>匯入帳號</h3>' +
+      '<button class="drawer-close" id="importClose">' + icon("x") + '</button></div>';
+
+    // ---- 第二段：檢視名單 ----
+    if (st === "review") {
+      const rows = orgState.importRows || [];
+      const okCount = importValidRows().length;
+      const f = orgState.importFile || {};
+      let html = head;
+      /* 可匯入 0 筆＝整份都是格式錯誤：直接擋在這裡，不讓它進「匯入中」空跑一輪。
+         名單照樣列出來（含每列原因）給使用者對照著修，並提供「重新上傳」直接換一份檔案。 */
+      if (okCount === 0) {
+        html += '<div class="import-blocked">' + icon("circleAlert") +
+          '<div><b>這份檔案沒有任何一筆可以匯入</b><br>' + rows.length +
+          ' 筆全部有格式問題，請依下方的錯誤原因修正後重新上傳。</div></div>';
+      } else {
+        html += '<div class="import-summary">' +
+          '<span>可匯入 <span class="is-ok">' + okCount + '</span> 筆</span>' +
+          '<span class="is-sep">/</span>' +
+          '<span>共 ' + rows.length + ' 筆</span>' +
+          (rows.length - okCount > 0 ? '<span class="is-bad">（' + (rows.length - okCount) + ' 筆有問題，將略過）</span>' : "") +
+          '<span class="is-file">' + icon("fileSheet") + escAttr(f.name || "") + '</span>' +
+          '</div>';
+      }
+
+      const cells = rows.map(function (r, i) {
+        const bad = !!r.err;
+        const val = function (v) {
+          return v ? '<span class="cell-val">' + escAttr(v) + '</span>' : '<span class="empty-val">—</span>';
+        };
+        return '<tr' + (bad ? ' class="is-invalid"' : "") + '>' +
+          '<td class="col-no">' + (r.excelRow || "") + '</td>' +
+          '<td>' + val(r.account) + '</td>' +
+          '<td>' + val(r.name) + '</td>' +
+          '<td>' + val(r.dept) + '</td>' +
+          '<td>' + val(importRoleLabel(r.role)) + '</td>' +
+          '<td>' + val(r.empNo) + '</td>' +
+          '<td>' + val(importPhoneDisplay(r)) + '</td>' +
+          '<td>' + val(r.email) + '</td>' +
+          '<td>' + (bad ? '<span class="err-text">' + escAttr(r.err) + '</span>' : "") + '</td>' +
+          // 叉叉只給「格式正確」的列：讓使用者排除不想匯入的人。
+          // 有錯的列本來就不會被匯入，要修得回 Excel 改，給叉叉反而讓人以為點了就解決了
+          '<td class="col-x">' + (bad ? "" :
+            '<button class="row-remove" data-import-remove="' + i + '" aria-label="移除這一列">' + icon("x") + '</button>') + '</td>' +
+          '</tr>';
+      }).join("");
+
+      // 欄寬：9 欄擠在 1100 的 modal 裡，E-mail 與錯誤原因拿最大兩份（其餘欄內容長度固定）
+      // 「列」＝該筆在 Excel 檔裡的列號，方便回去修改；多這一欄，其餘 9 欄等比讓出 5%
+      html += '<div class="import-list"><table><thead><tr>' +
+        '<th style="width:5%">列</th>' +
+        '<th style="width:11%">帳號</th><th style="width:9%">姓名</th><th style="width:9%">部門</th>' +
+        '<th style="width:10%">角色</th><th style="width:9%">員工編號</th><th style="width:12%">手機</th>' +
+        '<th style="width:16%">E-mail</th><th style="width:15%">錯誤原因</th><th style="width:4%"></th>' +
+        '</tr></thead><tbody>' + cells + '</tbody></table></div>';
+
+      html += '<div class="cm-foot"><button class="btn btn-secondary" id="importBack">取消</button>' +
+        (okCount === 0 ? '<button class="btn btn-secondary" id="importReupload">重新上傳</button>' : "") +
+        '<button class="btn btn-primary" id="importConfirm"' + (okCount === 0 ? " disabled" : "") + '>確定匯入</button></div>';
       return html;
     }
 
-    if (f) {
-      // ---- 狀態二：已選檔案 ----
+    // ---- 匯入中：逐筆寫入的進度頁 ----
+    if (st === "importing") {
+      const q = orgState.importQueue || [];
+      const done = q.filter(function (r) { return r.state === "done" || r.state === "failed"; }).length;
+      let html = head;
+      html += '<div class="import-summary"><span>正在寫入帳號，請不要關閉這個視窗。</span></div>';
+      const cells = q.map(function (r, i) {
+        const val = function (v) { return v ? '<span class="cell-val">' + escAttr(v) + '</span>' : '<span class="empty-val">—</span>'; };
+        return '<tr id="impRow' + i + '">' +
+          '<td class="col-no">' + (r.excelRow || "") + '</td>' +
+          '<td class="col-state" id="impState' + i + '">' + importStateCell(r) + '</td>' +
+          '<td>' + val(r.account) + '</td>' +
+          '<td>' + val(r.name) + '</td>' +
+          '<td>' + val(r.dept) + '</td>' +
+          '<td>' + val(importRoleLabel(r.role)) + '</td>' +
+          '<td>' + val(importPhoneDisplay(r)) + '</td>' +
+          '<td>' + val(r.email) + '</td>' +
+          '</tr>';
+      }).join("");
+      html += '<div class="import-list"><table><thead><tr>' +
+        '<th style="width:5%">列</th>' +
+        '<th style="width:11%">狀態</th><th style="width:13%">帳號</th><th style="width:11%">姓名</th>' +
+        '<th style="width:11%">部門</th><th style="width:12%">角色</th><th style="width:16%">行動電話</th>' +
+        '<th style="width:21%">電子信箱</th>' +
+        '</tr></thead><tbody>' + cells + '</tbody></table></div>';
+      html += '<div class="cm-foot" style="justify-content:space-between">' +
+        '<div class="import-progress">正在匯入中 <span class="ip-num" id="impProgress">(' + done + '/' + q.length + ')</span></div>' +
+        '<button class="btn btn-secondary" id="importStop">停止</button></div>';
+      return html;
+    }
+
+    // ---- 第三段：結果 ----
+    if (st === "result") {
+      const res = orgState.importResult || { rows: [], ok: 0 };
+      let html = head;
+      html += '<div class="import-summary">' +
+        '<span>匯入成功 <span class="is-ok">' + res.ok + '</span> 筆</span>' +
+        '<span class="is-sep">/</span><span>共 ' + res.rows.length + ' 筆</span>' +
+        (res.rows.length - res.ok > 0 ? '<span class="is-bad">（' + (res.rows.length - res.ok) + ' 筆未匯入）</span>' : "") +
+        (res.stopped ? '<span class="is-bad">· 已中途停止</span>' : "") +
+        '</div>';
+      const cells = res.rows.map(function (r) {
+        /* 結果一律看 r.state，不能只看有沒有錯誤原因——中途停止時，
+           還沒輪到的那些列既沒有格式錯誤也沒有系統失敗，但它們並沒有被建立。
+           三種結果：成功（已寫入）／失敗（格式錯誤或系統失敗）／未處理（按了停止）。 */
+        const isDone = r.state === "done";
+        const isFail = !!r.runErr || !!r.err;
+        const reason = r.runErr || r.err || (isDone ? "" : "已停止，這一筆未處理");
+        const bad = isFail;
+        const val = function (v) { return v ? '<span class="cell-val">' + escAttr(v) + '</span>' : '<span class="empty-val">—</span>'; };
+        return '<tr' + (bad ? ' class="is-invalid"' : "") + '>' +
+          '<td class="col-no">' + (r.excelRow || "") + '</td>' +
+          '<td class="col-state">' + (isDone
+            ? '<span class="state-ok">' + icon("check") + '成功</span>'
+            : (isFail ? '<span class="state-fail">' + icon("x") + '失敗</span>'
+                      : '<span class="state-wait">未處理</span>')) + '</td>' +
+          '<td>' + val(r.account) + '</td>' +
+          '<td>' + val(r.name) + '</td>' +
+          '<td>' + val(r.dept) + '</td>' +
+          '<td>' + val(importRoleLabel(r.role)) + '</td>' +
+          '<td>' + val(importPhoneDisplay(r)) + '</td>' +
+          '<td>' + val(r.email) + '</td>' +
+          '<td>' + (reason
+            ? '<span class="' + (bad ? "err-text" : "state-wait") + '">' + escAttr(reason) + '</span>'
+            : "") + '</td>' +
+          '</tr>';
+      }).join("");
+      html += '<div class="import-list"><table><thead><tr>' +
+        '<th style="width:5%">列</th>' +
+        '<th style="width:9%">結果</th><th style="width:12%">帳號</th><th style="width:10%">姓名</th>' +
+        '<th style="width:10%">部門</th><th style="width:11%">角色</th><th style="width:14%">行動電話</th>' +
+        '<th style="width:15%">電子信箱</th><th style="width:14%">失敗原因</th>' +
+        '</tr></thead><tbody>' + cells + '</tbody></table></div>';
+      html += '<div class="cm-foot"><button class="btn btn-primary" id="importFinish">完成</button></div>';
+      return html;
+    }
+
+    // ---- 第一段：上傳 ----
+    const f = orgState.importFile;
+    const fe = orgState.importFileError;
+    let html = head;
+    html += '<p>上傳 Excel 檔案一次建立多筆子帳號。</p>';
+
+    if (f && !fe) {
       html += '<div class="file-row">' + icon("fileSheet") +
         '<span class="fr-name">' + escAttr(f.name) + '</span>' +
         '<span class="fr-size">' + f.size + '</span>' +
         '<button id="importRemove" title="移除檔案">' + icon("x") + '</button></div>';
     } else {
-      // ---- 狀態一：尚未選檔 ----
-      html += '<div class="dropzone" id="importDrop">' + icon("upload") +
+      // icon 用 download（向下箭頭）：這一區的語意是「把資料匯入進系統」
+      html += '<div class="dropzone" id="importDrop">' + icon("download") +
         '<div><button class="btn btn-secondary btn-sm" id="importPick">選擇檔案</button></div>' +
         '<div class="dz-hint">或將檔案拖曳到這裡（支援 .xlsx／.xls）</div>' +
         '</div>';
     }
-    // 「下載範例檔」不掛 icon：站內的 .btn-text 文字連結（編輯／刪除／重新指派）一律無圖示，
+
+    // 檔案層級錯誤：整份擋在這一段，不讓它進名單檢視
+    if (fe) {
+      html += '<div class="file-error">' + icon("circleAlert") +
+        '<div><b>' + escAttr(fe.title) + '</b><br>' + escAttr(fe.detail) + '</div></div>';
+    }
+
+    // 「下載範例檔」不掛 icon：站內的 .btn-text 文字連結一律無圖示，
     // 而且這裡若用 download icon 會跟上方「匯入」按鈕的圖示完全一樣、語意反而混淆
     html += '<div style="margin-top:14px"><button class="btn-text" id="importSample">下載範例檔</button></div>';
-    html += '<div class="flag-note" style="margin:16px 0 0">' + icon("flag") +
-      '<div>此段為行為示意，實際解析待正式開發<span class="todo-tag">TODO</span></div></div>';
     html += '<div class="cm-foot"><button class="btn btn-secondary" id="importCancel">取消</button>' +
-      '<button class="btn btn-primary" id="importRun"' + (f ? "" : " disabled") + '>匯入</button></div>';
+      '<button class="btn btn-primary" id="importNext"' + (f && !fe ? "" : " disabled") + '>確定</button></div>';
     return html;
   }
 
   function openImportModal() {
-    orgState.importFile = null;
-    orgState.importDone = false;
+    resetImportState();
     paintImportModal();
     document.getElementById("orgConfirmMask").classList.add("open");
   }
+  function resetImportState() {
+    orgState.importStep = "upload";
+    orgState.importFile = null;
+    orgState.importFileRaw = null;
+    orgState.importFileError = null;
+    orgState.importRows = null;
+    orgState.importQueue = null;
+    orgState.importCursor = 0;
+    orgState.importStopped = true;   // 保險：關閉時讓還在跑的迴圈停下來
+    orgState.importResult = null;
+  }
   function closeImportModal() {
     document.getElementById("orgConfirmMask").classList.remove("open");
-    orgState.importFile = null;
-    orgState.importDone = false;
+    // 【不留個資】關掉就把整份名單從記憶體清掉，不留在 state 裡
+    resetImportState();
   }
-  // 重畫 modal 內容並重新綁事件（三個狀態共用同一個節點，狀態一換就整塊重畫）
+  /* 想關閉時的統一入口：已經進到名單檢視（或之後的結果頁）才需要攔一次，
+     還在上傳段就沒有東西會弄丟，直接關 */
+  function requestCloseImport() {
+    if (orgState.importStep === "review" || orgState.importStep === "importing" || orgState.importStep === "result") {
+      orgState.importStepBeforeLeave = orgState.importStep;
+      orgState.importStep = "leave";
+      paintImportModal();
+      return;
+    }
+    closeImportModal();
+  }
+  // 重畫 modal 內容並重新綁事件（各段共用同一個節點，狀態一換就整塊重畫）
   function paintImportModal() {
     const mask = document.getElementById("orgConfirmMask");
-    mask.innerHTML = '<div class="confirm-modal is-wide">' + renderImportBody() + '</div>';
+    // 名單檢視要放 9 欄，用更寬的 is-xwide；上傳／離開確認維持窄版
+    // ⚠️ importing 一定要一起列進來：漏掉的話 loading 會掉回 480px 的窄版，
+    // 欄位被擠到嚴重換行，跟前後兩段的 modal 大小也對不起來
+    const wide = (orgState.importStep === "review" || orgState.importStep === "importing" || orgState.importStep === "result")
+      ? "is-xwide" : "is-wide";
+    mask.innerHTML = '<div class="confirm-modal ' + wide + '">' + renderImportBody() + '</div>';
     wireImportModal();
   }
   function wireImportModal() {
-    const close = document.getElementById("importClose");
-    if (close) close.addEventListener("click", closeImportModal);
-    const cancel = document.getElementById("importCancel");
-    if (cancel) cancel.addEventListener("click", closeImportModal);
-    const done = document.getElementById("importDone");
-    if (done) done.addEventListener("click", function () {
-      closeImportModal();
-      showToast("已匯入 8 筆帳號（示意）");
+    const on = function (id, fn) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("click", fn);
+    };
+
+    on("importClose", requestCloseImport);
+    on("importCancel", closeImportModal);   // 第一段：沒有東西會弄丟，直接關
+    on("importBack", requestCloseImport);   // 第二段的「取消」＝離開整個匯入，要問一次
+
+    // 離開確認
+    on("leaveStay", function () {
+      orgState.importStep = orgState.importStepBeforeLeave || "review";
+      paintImportModal();
     });
-    const remove = document.getElementById("importRemove");
-    if (remove) remove.addEventListener("click", function () {
+    on("leaveConfirm", closeImportModal);
+
+    // 第一段 →（解析示意）→ 第二段
+    on("importNext", async function () {
+      const btn = document.getElementById("importNext");
+      if (!orgState.importFileRaw || orgState.importFileError) return;
+      btn.disabled = true;
+      btn.textContent = "讀取中…";
+      try {
+        // 真的解析上傳的 xlsx（見上方 readXlsxRows），再逐列套驗證規則
+        const buf = await orgState.importFileRaw.arrayBuffer();
+        const sheetRows = await readXlsxRows(buf);
+        const result = buildImportRows(sheetRows);
+        if (result.fileError) {
+          orgState.importFileError = result.fileError;
+          paintImportModal();
+          return;
+        }
+        orgState.importRows = result.rows;
+        orgState.importStep = "review";
+        paintImportModal();
+      } catch (e) {
+        // 解析失敗（不是有效的 xlsx／舊版 .xls 二進位格式／檔案毀損）
+        orgState.importFileError = {
+          title: "無法讀取這個檔案",
+          detail: "檔案可能不是有效的 Excel 活頁簿，或格式為舊版 .xls。請用 Excel 另存為 .xlsx 後再上傳。"
+        };
+        paintImportModal();
+      }
+    });
+
+    on("importRemove", function () {
       orgState.importFile = null;
+      orgState.importFileRaw = null;
+      orgState.importFileError = null;
       paintImportModal();
     });
-    const run = document.getElementById("importRun");
-    if (run) run.addEventListener("click", function () {
-      if (!orgState.importFile) return;
-      orgState.importDone = true;
+
+    /* 下載範例檔：assets/account-import-sample.xlsx 是真的檔案（用 openpyxl 產生，
+       含「帳號匯入清單」與「欄位說明」兩個工作表），不是佔位。
+       用 <a download> 指定中文檔名——這是真實檔案 URL 不是 blob，Safari 對 download
+       屬性的支援沒問題（登入前頁面備用碼下載那個 blob 的坑不適用於這裡）。 */
+    on("importSample", function () {
+      const a = document.createElement("a");
+      a.href = "assets/account_import.xlsx";
+      a.download = "account_import.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast("已下載範例檔");
+    });
+
+    // 名單逐列移除
+    document.querySelectorAll("[data-import-remove]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const i = parseInt(btn.getAttribute("data-import-remove"), 10);
+        orgState.importRows.splice(i, 1);
+        if (orgState.importRows.length === 0) {
+          // 整份被移光就退回上傳段，不留一個空表在那裡
+          orgState.importStep = "upload";
+          orgState.importFile = null;
+        }
+        paintImportModal();
+      });
+    });
+
+    // 第二段 →「匯入中」：實際建立帳號改在 loading 那一段逐筆進行（見 startImportRun）
+    on("importConfirm", function () {
+      if (importValidRows().length === 0) return;   // 0 筆時按鈕本來就 disabled，這裡再保一道
+      startImportRun();
+    });
+
+    // 可匯入 0 筆時的「重新上傳」：回到上傳段並清掉這份檔案
+    on("importReupload", function () {
+      orgState.importStep = "upload";
+      orgState.importFile = null;
+      orgState.importFileRaw = null;
+      orgState.importFileError = null;
+      orgState.importRows = null;
       paintImportModal();
     });
-    const sample = document.getElementById("importSample");
-    if (sample) sample.addEventListener("click", function () {
-      showToast("範例檔下載為佔位，實際檔案待正式開發");
+
+    // 停止：已處理的保留，未處理的維持「等待中」，直接進結果頁
+    on("importStop", function () {
+      orgState.importStopped = true;
+      const btn = document.getElementById("importStop");
+      if (btn) { btn.disabled = true; btn.textContent = "停止中…"; }
     });
+
+    on("importFinish", function () {
+      const ok = (orgState.importResult || {}).ok || 0;
+      closeImportModal();
+      renderContent();   // 回到帳號列表，新帳號會出現在裡面
+      showToast("已匯入 " + ok + " 筆帳號");
+    });
+
     // 選檔：用隱藏的 file input，真的讀使用者選的檔名／大小（不解析內容）
-    const pick = document.getElementById("importPick");
-    if (pick) pick.addEventListener("click", function () {
+    on("importPick", function () {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".xlsx,.xls";
@@ -2815,6 +3642,7 @@
       });
       input.click();
     });
+
     // 拖曳：dragover 要 preventDefault，否則瀏覽器會直接開啟被拖進來的檔案
     const drop = document.getElementById("importDrop");
     if (drop) {
@@ -2829,10 +3657,13 @@
   }
   function acceptImportFile(file) {
     const kb = file.size / 1024;
+    orgState.importFileRaw = file;   // 留住檔案本體，按「確定」時才真的解析
     orgState.importFile = {
       name: file.name,
       size: kb >= 1024 ? (kb / 1024).toFixed(1) + " MB" : Math.max(1, Math.round(kb)) + " KB"
     };
+    // 檔案層級錯誤在這一刻就判斷，擋在上傳段（不進名單檢視）
+    orgState.importFileError = detectFileLevelError(file);
     paintImportModal();
   }
 
@@ -2998,8 +3829,9 @@
   // ---- 停用／啟用／刪除 確認框（沿用系統 Modal 定案：危險/一般確認無 ✕、footer 無分隔線） ----
   // 2026-08-13：帳號的單筆刪除入口從列表移進編輯抽屜（比照「停用」收法），這裡的 kind==="account"
   // 現在只會從抽屜的「刪除帳號」按鈕觸發；批次刪除另外走 openBulkConfirm("delete")。
-  // 刪除是硬刪還是改停用還沒跟 PM 確認（見下方 TODO 提示），所以帳號這條路徑 runConfirm() 只做
-  // 二次確認 UI 本身、不真的動資料——department 分支不在這次調整範圍內，維持既有的真刪除行為
+  // ⚠️ 刪除是硬刪還是改停用還沒跟 PM 確認，所以帳號這條路徑 runConfirm() 只做二次確認 UI 本身、
+  // 不真的動資料——department 分支不在這次調整範圍內，維持既有的真刪除行為。
+  // 2026-08-14：這件事原本在 modal 裡有一塊黃框 TODO 寫給看原型的人，Alvie 決定拿掉，改口頭說明
   function openConfirm(id, kind) {
     orgState.pendingConfirm = { id: id, kind: kind };
     let title, body;
@@ -3011,8 +3843,6 @@
       title = "刪除帳號"; body = "確定要刪除「" + acct.name + "」嗎？此操作無法復原。";
     }
     const html = '<div class="confirm-modal"><h3>' + title + '</h3><p>' + body + '</p>' +
-      '<div class="flag-note" style="margin-top:14px">' + icon("flag") +
-      '<div>刪除方式（硬刪除或改為停用）尚待 PM 確認，此為 UI 示意<span class="todo-tag">TODO</span></div></div>' +
       '<div class="cm-foot"><button class="btn btn-secondary" id="confirmCancel">取消</button>' +
       '<button class="btn btn-danger" id="confirmOk">刪除</button></div></div>';
     document.getElementById("orgConfirmMask").innerHTML = html;
@@ -3045,17 +3875,11 @@
   // ============================================================
   // 二、部門（含指派主管，不另開頁）
   // ============================================================
+  /* 2026-08-14：主管欄變成純資料欄。原本這裡還掛一顆「重新指派／指派」的 inline 按鈕，
+     已收進「編輯部門」modal（見 openDeptFormModal 的說明），表格每列因此只剩編輯／刪除兩個操作。 */
   function renderManagerCell(d) {
-    const isAdmin = state.demoRole === "companyAdmin";
     const manager = d.managerId ? ACCOUNTS.find(function (a) { return a.id === d.managerId; }) : null;
-    const label = manager ? manager.name : '<span class="muted">未指派</span>';
-    if (!isAdmin) return label;
-    /* 2026-08-14：這顆按鈕原本掛了 inline style `font-size:var(--fs-caption)`，把字級壓成 13px——
-       比同列的主管名字（16px）與右邊的「編輯／刪除」（16px）都小兩階，看起來像次等資訊。
-       inline style 已移除，改成完全繼承 .btn-text（Body 16／600／橘），跟其他操作連結一致。
-       外層的排版樣式也從 inline 收進 .manager-cell（gap 改綁 spacing token，不寫死 8px）。 */
-    return '<span class="manager-cell">' + label +
-      '<button class="btn-text" data-assign="' + d.id + '">' + (manager ? "重新指派" : "指派") + '</button></span>';
+    return manager ? escAttr(manager.name) : '<span class="muted">未指派</span>';
   }
   function renderDeptList() {
     const isAdmin = state.demoRole === "companyAdmin";
@@ -3063,24 +3887,27 @@
     const rows = depts.map(function (d) {
       const cnt = ACCOUNTS.filter(function (a) { return a.deptId === d.id; }).length;
       let actions = "";
-      // 刪除停用的原因改用「就地說明」呈現（見 .dept-del-note）：原本掛在 button 上的 title
-      // 屬性已拿掉——disabled 的按鈕不會觸發滑鼠事件，那個原生提示實際上多數時候根本出不來
-      let noteAttr = "";
       if (isAdmin) {
-        if (cnt > 0) {
-          noteAttr = ' data-del-note="' + escAttr("此部門尚有 " + cnt + " 個帳號，無法刪除。請先將帳號移至其他部門或刪除帳號後，再刪除此部門。") + '"';
-        }
+        /* 刪除停用時，原因用「就地說明」呈現（見 .dept-note-row）。
+           2026-08-14 第三版：hover 監聽從整個操作欄（td，約 240px 寬）縮到緊貼按鈕的
+           .del-hint-zone —— 掛在 td 上時，滑鼠還在欄位左側空白處就觸發了，離按鈕很遠卻一直跳出說明。
+           為什麼要包一層 span：disabled 的 <button> 不會發出滑鼠事件，事件必須由外層元素接。
+           span 用 inline-flex 剛好貼合按鈕，觸發範圍＝按鈕本身。 */
+        const delBtn = '<button class="btn-danger-text" data-del-dept="' + d.id + '"' + (cnt > 0 ? ' disabled' : "") + '>刪除</button>';
+        const delPart = cnt > 0
+          ? '<span class="del-hint-zone" data-del-note="' + escAttr("此部門尚有 " + cnt + " 個帳號，無法刪除。請先將帳號移至其他部門或刪除帳號後，再刪除此部門。") + '">' + delBtn + '</span>'
+          : delBtn;
         actions = '<div class="row-actions">' +
           '<button class="btn-text" data-edit-dept="' + d.id + '">編輯</button>' +
-          '<button class="btn-danger-text" data-del-dept="' + d.id + '"' + (cnt > 0 ? ' disabled' : "") + '>刪除</button>' +
+          delPart +
           '</div>';
       }
       return '<tr>' +
         '<td class="name-cell wrap-cell">' + escAttr(d.name) + '</td>' +
         '<td class="muted num-cell">' + d.code + '</td>' +
-        '<td data-dept-manager-cell="' + d.id + '">' + renderManagerCell(d) + '</td>' +
+        '<td class="wrap-cell">' + renderManagerCell(d) + '</td>' +
         '<td class="num-cell muted">' + cnt + ' 人</td>' +
-        '<td class="col-actions"' + noteAttr + '>' + actions + '</td>' +
+        '<td class="col-actions">' + actions + '</td>' +
         '</tr>';
     }).join("");
     return '<div class="table-card"><div class="table-scroll"><table class="data-table is-interactive dept-table"><thead><tr>' +
@@ -3106,15 +3933,35 @@
     const dept = deptId ? DEPARTMENTS.find(function (d) { return d.id === deptId; }) : null;
     const isEdit = !!dept;
     // maxlength 採舊網站實測值（見 openAccountDrawer 開頭的說明）
+    /* 2026-08-14：主管從表格上的 inline「重新指派」收進這個 modal，變成第三個欄位。
+       理由：① 子帳號管理頁就是「列上只有編輯、所有屬性在面板裡改」，這頁原本是全站唯一的例外
+             ② 主管欄原本一格塞了資料（Ben）＋動作（重新指派），掃讀被打斷
+             ③ 一列三個橘色連結（重新指派／編輯／刪除）主次不分
+       指派主管是低頻動作（建立時設一次、偶爾換人），不該長期佔用每一列的視覺空間。
+       ⚠️ 主管與帳號角色不連動（Alvie 2026-08-14 裁示）：任何帳號都能當主管，
+          這裡只寫 dept.managerId，絕不去改 ACCOUNTS 裡的 role。 */
+    const deptAccounts = deptId ? ACCOUNTS.filter(function (a) { return a.deptId === deptId; }) : [];
+    const mgrOptions = [{ value: "", label: "未指派" }].concat(
+      deptAccounts.map(function (a) { return { value: a.id, label: a.name }; })
+    );
+    const mgrField = '<div class="field-group" data-field="deptManager"><label>部門主管</label>' +
+      renderDropdown("deptManagerSelect", mgrOptions, (dept && dept.managerId) || "", { disabled: !isEdit }) +
+      (isEdit
+        ? (deptAccounts.length === 0 ? '<div class="hint">此部門目前沒有帳號，請先將帳號指派到這個部門</div>' : "")
+        : '<div class="hint">部門建立後，將帳號指派到此部門才能選主管</div>') +
+      '</div>';
+
     const html = '<div class="confirm-modal"><h3>' + (isEdit ? "編輯部門" : "新增部門") + '</h3>' +
       '<div class="field-group" data-field="deptName" style="margin-top:14px"><label>部門名稱<span class="req">*</span></label>' +
       '<input type="text" id="deptNameInput" maxlength="15" value="' + escAttr(dept ? dept.name : "") + '"><div class="err-msg" id="err-deptName" style="display:none"></div></div>' +
       '<div class="field-group" data-field="deptCode"><label>部門代碼<span class="req">*</span></label>' +
       '<input type="text" id="deptCodeInput" placeholder="例如 SALES01" maxlength="15" value="' + escAttr(dept ? dept.code : "") + '">' +
       '<div class="err-msg" id="err-deptCode" style="display:none"></div></div>' +
+      mgrField +
       '<div class="cm-foot"><button class="btn btn-secondary" id="deptFormCancel">取消</button><button class="btn btn-primary" id="deptFormOk">' + (isEdit ? "儲存" : "建立") + '</button></div></div>';
     document.getElementById("orgConfirmMask").innerHTML = html;
     document.getElementById("orgConfirmMask").classList.add("open");
+    ddBind("deptManagerSelect");
     document.getElementById("deptNameInput").focus();
     document.getElementById("deptFormCancel").addEventListener("click", closeConfirm);
     document.getElementById("deptFormOk").addEventListener("click", function () {
@@ -3129,6 +3976,8 @@
       if (hasError) return;
       if (isEdit) {
         dept.name = nameVal; dept.code = codeVal.toUpperCase();
+        // 主管跟名稱/代碼一起在按下「儲存」時才生效；中途取消什麼都不會變
+        dept.managerId = ddValue("deptManagerSelect") || null;
         showToast("已儲存「" + nameVal + "」的變更");
       } else {
         DEPARTMENTS.push({ id: "d" + Date.now().toString(36), name: nameVal, code: codeVal.toUpperCase(), managerId: null });
@@ -3138,47 +3987,11 @@
       renderContent();
     });
   }
-  function startAssignManager(deptId) {
-    const cell = document.querySelector('[data-dept-manager-cell="' + deptId + '"]');
-    const dept = DEPARTMENTS.find(function (d) { return d.id === deptId; });
-    const deptAccounts = ACCOUNTS.filter(function (a) { return a.deptId === deptId; });
-    const options = [{ value: "", label: "未指派" }].concat(deptAccounts.map(function (a) { return { value: a.id, label: a.name }; }));
-    cell.innerHTML = renderDropdown("assignSelect", options, dept.managerId || "", {
-      className: "manager-select",
-      onChange: function (value) {
-        const newManagerId = value || null;
-        const oldManagerId = dept.managerId;
-        // 換人＝把舊主管的角色退回一般使用者、新主管的角色升成部門管理員，
-        // 讓「部門頁指派主管」跟「帳號頁角色」兩處資料保持一致（一個部門同時間只有一位主管）
-        if (oldManagerId && oldManagerId !== newManagerId) {
-          const oldAcct = ACCOUNTS.find(function (a) { return a.id === oldManagerId; });
-          if (oldAcct) oldAcct.role = "user";
-        }
-        dept.managerId = newManagerId;
-        let msg = "已取消" + dept.name + "主管指派";
-        if (newManagerId) {
-          const newAcct = ACCOUNTS.find(function (a) { return a.id === newManagerId; });
-          newAcct.role = "deptManager";
-          msg = "已指派「" + newAcct.name + "」為" + dept.name + "主管";
-        }
-        showToast(msg);
-        renderContent();
-      }
-    });
-    ddBind("assignSelect");
-    // 延到下一輪事件迴圈才自動展開：這個呼叫是在「指派/換人」按鈕的 click handler 裡觸發的，
-    // 同一個 click 事件還在往上冒泡到 document 的「點外面關閉」監聽器，若同步呼叫 ddOpen()，
-    // 會被那個監聽器誤判成「點了下拉外面」當場關掉（e.target 還是舊的觸發按鈕，不在新面板/新按鈕裡）
-    setTimeout(function () { ddOpen(document.getElementById("dd-assignSelect")); }, 0);
-  }
   function wireDepartmentsPage() {
     const btnNew = document.getElementById("btnNewDept");
     if (btnNew) btnNew.addEventListener("click", function () { openDeptFormModal(null); });
     document.querySelectorAll("[data-edit-dept]").forEach(function (btn) {
       btn.addEventListener("click", function () { openDeptFormModal(btn.getAttribute("data-edit-dept")); });
-    });
-    document.querySelectorAll("[data-assign]").forEach(function (btn) {
-      btn.addEventListener("click", function () { startAssignManager(btn.getAttribute("data-assign")); });
     });
     document.querySelectorAll("[data-del-dept]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -3194,7 +4007,7 @@
       const old = document.querySelector(".dept-note-row");
       if (old) old.remove();
     }
-    document.querySelectorAll("td.col-actions[data-del-note]").forEach(function (cell) {
+    document.querySelectorAll(".del-hint-zone[data-del-note]").forEach(function (cell) {
       cell.addEventListener("mouseenter", function () {
         clearDeptNoteRow(); // 從一列直接滑到另一列時，先收掉前一列的說明
         const tr = cell.closest("tr");
@@ -3294,6 +4107,19 @@
     { min: 140000, actor: "emma", cat: "permission", action: "刪除子帳號", target: "old.chen", desc: "帳號已刪除，紀錄保留" },
     { min: 160000, actor: "emma", cat: "identity", action: "登入成功", target: null, desc: "來源 IP 203.0.113.xxx（末段遮罩）" }
   ];
+
+  /* 新事件寫入 Audit Log（目前只有匯入會呼叫）。
+     min 用遞減的負數：這份資料以「進站當下」為基準、數字越小越新，
+     所以站內新產生的事件一律排在最前面。
+     【不留個資】呼叫端只傳筆數統計，這裡也不會去碰名單內容。 */
+  let auditNewSeq = 0;
+  function addAuditEntry(e) {
+    AUDIT_LOG.unshift({
+      min: --auditNewSeq,
+      actor: e.actor || "emma",   // demo 情境的登入者＝母帳號；正式版帶目前登入者的帳號代號
+      cat: e.cat, action: e.action, target: e.target || null, desc: e.desc, alert: !!e.alert
+    });
+  }
 
   const auditState = { search: "", cat: "all", range: "30d", page: 1, pageSize: 25 };
   const AUDIT_PAGE_SIZES = [
@@ -3434,9 +4260,12 @@
        用 clone 量每欄「表頭與內容取較大值 + 32px padding」的 nowrap 需求換算的：
          時間 173（"2026-08-13 16:40" 16px＝141）｜操作者 101｜類別 112（"帳號與身分"＝80）
          動作 128（"調整權限設定"＝96）｜對象 99｜說明 290（最長那句＝258）
-       前五欄合計 613px，剩 323px 給說明（需求 290，還有餘裕）——936px 下六欄全部單行。
-       ⚠️ 表頭一定要一起算：帳號表那次就是只看內容寬度，結果「員工編號」表頭自己換行。 */
-    const W = { time: 18.5, actor: 11, cat: 12, action: 13.8, target: 10.7, desc: 34 };
+       ⚠️ 表頭一定要一起算：帳號表那次就是只看內容寬度，結果「員工編號」表頭自己換行。
+       2026-08-14 重配：說明欄字級拉回 Body 16 後需求從 290 → 326，且 ≤1366px 時 cell padding
+       收成 12px（見上面的 media query）。以 1280（表格 936px、padding 24）重算每欄
+       「max(表頭, 內容) + padding」的需求：時間 169｜操作者 93｜類別 104｜動作 120｜對象 91｜說明 318，
+       合計 895，剩下 41px 當緩衝分散給各欄（避免四捨五入剛好差 1px 就換行）。 */
+    const W = { time: 18.5, actor: 10.2, cat: 11.4, action: 13.2, target: 10, desc: 36.7 };
     const rows = list.map(function (e) {
       const alertDot = e.alert ? '<span class="alert-dot"></span>' : "";
       // 對象欄比照帳號表的「帳號」欄＝次要識別碼，用共用的 .muted 灰、不加粗
@@ -3567,6 +4396,15 @@
   document.getElementById("orgDrawerMask").addEventListener("click", closeDrawer);
   syncDemoRoleBar();
   syncDemoContractBar();
+
+  /* 截圖模式：網址加 ?demo=0 隱藏左下角的 demo 切換列（身份／合約狀態）。
+     那條列是純原型工具、正式版不存在，要把畫面截圖交出去（放進 Figma、簡報）時不該出現。
+     沿用登入前流程 demo-mode.js 的參數慣例（?demo=0 關、預設開），只藏不刪——
+     身份切換的邏輯與狀態都還在，拿掉參數重新整理就回來了。 */
+  if (new URLSearchParams(location.search).get("demo") === "0") {
+    const demoBar = document.getElementById("demoRoleBar");
+    if (demoBar) demoBar.style.display = "none";
+  }
 
   // ---- topbar popovers ----
   function wirePopover(btnId, popId) {
