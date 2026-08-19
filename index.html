@@ -1612,7 +1612,7 @@
     // 渲染，renderContent() 裡對 topItem.id === "org" 另外分流到專用渲染器。
     { id: "org", label: "組織與子帳號", kind: "group", icon: "org", children: [
       { id: "org-accounts", label: "子帳號管理" },
-      { id: "org-departments", label: "部門" },
+      { id: "org-departments", label: "部門管理" },
       // 2026-08-13 新增：操作紀錄（Audit Log）。access 是三級裡最嚴的 companyAdmin——
       // 稽核紀錄會揭露「誰對誰做了什麼」，部門管理員看得到就等於看得到別部門的動作
       { id: "org-audit", label: "操作紀錄" }
@@ -1711,7 +1711,7 @@
     ]},
     { category: "組織與子帳號", items: [
       { label: "子帳號管理", access: "admin" },
-      { label: "部門", access: "admin" },
+      { label: "部門管理", access: "admin" },
       { label: "操作紀錄", access: "companyAdmin" }
     ]},
     { category: "設定", items: [
@@ -4402,8 +4402,7 @@
   }
   function renderDepartmentsPage() {
     const isAdmin = state.demoRole === "companyAdmin";
-    let html = '<div class="page-head"><h1>部門</h1></div>';
-    html += '<div class="page-sub">' + (isAdmin ? "管理部門與各部門主管指派" : "檢視您所屬部門的資訊（唯讀）") + '</div>';
+    let html = '<div class="page-head"><h1>部門管理</h1></div>';
     if (isAdmin) html += '<div class="filter-bar" style="justify-content:flex-end"><button class="btn btn-primary" id="btnNewDept">' + icon("plus") + '新增部門</button></div>';
     html += '<div id="deptListWrap">' + renderDeptList() + '</div>';
     return html;
