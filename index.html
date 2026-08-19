@@ -2873,7 +2873,13 @@
   // 公司名稱那行（原本樹的標題）拿掉——組織目前只有一層（公司底下直接掛部門、沒有子部門），
   // 那行沒有表達到層級關係，純裝飾，拿掉還能省一截寬度
   function renderDeptChips() {
-    const allCount = ACCOUNTS.filter(function (a) { return a.deptId !== null; }).length;
+    /* 2026-08-19 修正：原本是 ACCOUNTS.filter(a => a.deptId !== null).length，
+       把母帳號排除在外——但表格是照 scopedAccounts() 列的，企業管理員看得到母帳號，
+       於是 chip 說「全部帳號 16」、表格說「共 17 筆」，兩個數字對不上。
+       「全部帳號」這顆 chip 的語意是「不套用部門篩選、看全部」，母帳號本來就在
+       「全部」裡面，所以直接跟表格取同一個來源，兩邊不可能再各算各的。
+       下面各部門的 chip 維持 deptId 比對不變（母帳號沒有部門，本來就不屬於任何一顆）。 */
+    const allCount = scopedAccounts().length;
     let html = '<div class="dept-chips">';
     html += '<button class="dept-chip' + (orgState.deptFilter === "all" ? " active" : "") + '" data-tree="all">全部帳號<span class="cnt">' + allCount + '</span></button>';
     DEPARTMENTS.forEach(function (d) {
@@ -4279,8 +4285,13 @@
   // ⚠️ 刪除是硬刪還是改停用還沒跟 PM 確認，所以帳號這條路徑 runConfirm() 只做二次確認 UI 本身、
   // 不真的動資料——department 分支不在這次調整範圍內，維持既有的真刪除行為。
   // 2026-08-14：這件事原本在 modal 裡有一塊黃框 TODO 寫給看原型的人，Alvie 決定拿掉，改口頭說明
-  /* 「還沒有任何部門」的擋門（2026-08-19 產品規則：新增帳號一定要指定部門，
-     所以系統裡至少要先有一個部門）。原本 openAccountDrawer 會在 scopedDepts[0].id
+  /* 「還沒有任何部門」的擋門（2026-08-19 產品規則：新增子帳號一定要指定部門，
+     所以系統裡至少要先有一個部門）。
+     文案刻意講「子帳號」不講「帳號」：母帳號（企業管理員）代表公司本身、不隸屬任何
+     部門（列表顯示「—（總公司）」），只講「帳號」的話規則當場就有反例——使用者自己
+     那個帳號就沒有部門。新增表單的角色下拉本來也選不到企業管理員，從這裡建出來的
+     一定是子帳號，措辭跟實際行為對齊。
+     原本 openAccountDrawer 會在 scopedDepts[0].id
      直接丟 TypeError、抽屜整個開不起來、畫面毫無回饋，等於按了像壞掉。
      擋在入口而不是把按鈕 disabled：disabled 只告訴使用者「不能按」，不會告訴他
      去哪裡解決，而且這頁沒有 tooltip 元件（要新做就變成擴充設計系統）。
@@ -4294,8 +4305,8 @@
     // 部門管理員點過去也是唯讀，給了反而更困惑，改成單一「知道了」收掉
     const isAdmin = state.demoRole === "companyAdmin";
     const body = action === "import"
-      ? "匯入的每一筆帳號都必須指定所屬部門，請先建立至少一個部門。"
-      : "新增帳號時必須指定所屬部門，請先建立至少一個部門。";
+      ? "匯入的每一筆子帳號都必須指定所屬部門，請先建立至少一個部門。"
+      : "新增子帳號時必須指定所屬部門，請先建立至少一個部門。";
     let foot = '<div class="cm-foot">';
     foot += isAdmin
       ? '<button class="btn btn-secondary" id="noDeptCancel">取消</button>' +
