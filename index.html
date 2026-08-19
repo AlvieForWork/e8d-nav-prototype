@@ -4934,10 +4934,20 @@
   document.addEventListener("click", function () {
     document.querySelectorAll(".popover.open").forEach(function (p) { p.classList.remove("open"); });
   });
+  /* 登出 → 導回登入前流程（2026-08-19）。
+     登入前流程是另一個 repo／另一個 GitHub Pages（e8d-design-system），所以用絕對 URL——
+     跟反方向的做法對稱：登入流程走完 2FA 後也是用絕對 URL 導到這個後台
+     （見 `E8D 設計系統/F1-2FA驗證頁-提案.html` 的 window.location.href）。
+     ⚠️ 已知取捨：本機 localhost:8744 測試時點登出會跳到線上的登入流程頁
+     （因為登入前那套沒跟這支一起起 server）。demo 都在線上跑，這個落差可接受。
+     先讓 toast 閃一下再跳，觀看 demo 的人才知道剛剛發生了什麼；不做二次確認——
+     登出不是破壞性操作（可以再登入），不需要攔一道。 */
+  const LOGIN_FLOW_URL = "https://alvieforwork.github.io/e8d-design-system/";
   document.getElementById("btnLogout").addEventListener("click", function (e) {
     e.stopPropagation();
     document.getElementById("popAvatar").classList.remove("open");
-    showToast("已登出（示意）");
+    showToast("已登出，正在返回登入頁…");
+    setTimeout(function () { window.location.href = LOGIN_FLOW_URL; }, 700);
   });
 
   /* ---- toast（全站共用）----
