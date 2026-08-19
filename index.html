@@ -2742,6 +2742,38 @@
   function dialDisplay(iso) {
     return "+" + dialFor(iso);
   }
+  /* 手機號碼比對鍵（2026-08-19：一個手機號碼只能綁一個帳號）。
+     產品規則要比的是「同一支門號」，不是「同一個字串」，所以先正規化再比：
+     ① 去掉所有非數字（空白、連字號、括號這類使用者手打進來的分隔符號）
+     ② 台灣的前導 0 是國內撥號用的 trunk prefix，+886 912345678 與 0912345678
+        是同一支，去掉 0 才比得出來（只針對 886 處理，跟 phoneFormatOk／
+        寫入前正規化的既有規則一致，不擅自推廣到其他國家的 trunk prefix）
+     ③ 用「國碼(dial)」而非 iso 當前綴——US 與 CA 共用 +1，同一支號碼在兩個
+        iso 底下本來就是同一支，用 iso 會漏抓 */
+  function phoneKeyFromDial(dial, phone) {
+    let digits = String(phone == null ? "" : phone).replace(/\D/g, "");
+    if (String(dial) === "886") digits = digits.replace(/^0+/, "");
+    return dial + "-" + digits;
+  }
+  function phoneKey(iso, phone) {
+    return phoneKeyFromDial(dialFor(iso), phone);
+  }
+  /* 手機格式規則（2026-08-19 從匯入的 importPhoneOk 原封不動抽上來，規則一個字沒改）。
+     原本只有匯入在用、名字帶 import 前綴，抽屜表單改成也要驗格式之後兩邊必須同一套，
+     所以搬到這裡跟 phoneKey／normalizePhoneInput 放一起，物理上只留一份。
+     台灣門號：Excel 常把開頭的 0 吃掉（0912345678 存成 912345678），兩種都要收。
+     其他國家原型階段先寬鬆檢查純數字 6～15 碼，正式版再按各國規則細分。 */
+  function phoneFormatOk(dial, phone) {
+    if (String(dial) === "886") return /^0?9\d{8}$/.test(phone);
+    return /^\d{6,15}$/.test(phone);
+  }
+  // 存檔前把使用者手打的寫法收斂成正規形式（例：0912345678 → 912345678），
+  // 否則資料本身會混著兩種寫法，日後的比對照樣會漏
+  function normalizePhoneInput(iso, phone) {
+    let digits = String(phone).replace(/\D/g, "");
+    if (dialFor(iso) === "886") digits = digits.replace(/^0+/, "");
+    return digits;
+  }
   function field(key, label, required, inputHtml) {
     return '<div class="field-group" data-field="' + key + '"><label>' + label +
       (required ? '<span class="req">*</span>' : '') + '</label>' + inputHtml +
@@ -3068,12 +3100,22 @@
     // 分頁列跟著列表一起重畫，事件要重綁（空狀態時沒有分頁列，bindPagerBar 會自然無事可做）
     bindPagerBar("#orgAccountsListWrap", { ddId: "acctPageSize", st: orgState, refresh: refreshAccountsList });
   }
+  /* 產生帳號的兩個入口都要先過「有沒有部門」這一關（見 openNoDeptModal）。
+     編輯既有帳號不必擋——那筆帳號本來就已經有部門了。 */
+  function requestNewAccount() {
+    if (!hasAnyDeptInScope()) { openNoDeptModal("create"); return; }
+    openAccountDrawer(null);
+  }
+  function requestImport() {
+    if (!hasAnyDeptInScope()) { openNoDeptModal("import"); return; }
+    openImportModal();
+  }
   function bindListRowActions() {
     document.querySelectorAll("[data-edit]").forEach(function (btn) {
       btn.addEventListener("click", function () { openAccountDrawer(btn.getAttribute("data-edit")); });
     });
     document.querySelectorAll("#btnNewAccountEmpty").forEach(function (btn) {
-      btn.addEventListener("click", function () { openAccountDrawer(null); });
+      btn.addEventListener("click", requestNewAccount);
     });
     document.querySelectorAll("#btnClearFilters").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -3218,11 +3260,11 @@
       });
     });
     const btnNew = document.getElementById("btnNewAccount");
-    if (btnNew) btnNew.addEventListener("click", function () { openAccountDrawer(null); });
+    if (btnNew) btnNew.addEventListener("click", requestNewAccount);
     const btnBulk = document.getElementById("btnBulkToggle");
     if (btnBulk) btnBulk.addEventListener("click", enterBulkMode);
     const btnImport = document.getElementById("btnImport");
-    if (btnImport) btnImport.addEventListener("click", openImportModal);
+    if (btnImport) btnImport.addEventListener("click", requestImport);
     wireBulkBar();
   }
 
@@ -3383,12 +3425,6 @@
   function importIsValidDial(dial) {
     return COUNTRY_CODES.some(function (c) { return c.dial === dial; });
   }
-  /* 台灣門號：Excel 常把開頭的 0 吃掉（0912345678 存成 912345678），兩種都要收。
-     其他國家原型階段先寬鬆檢查純數字 6～15 碼，正式版再按各國規則細分。 */
-  function importPhoneOk(dial, phone) {
-    if (dial === "886") return /^0?9\d{8}$/.test(phone);
-    return /^\d{6,15}$/.test(phone);
-  }
   const IMPORT_PWD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
   const IMPORT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   /* 2026-08-17 文案收斂（Alvie 指定）：同一欄的多種「內容錯誤」講同一句話，
@@ -3401,7 +3437,7 @@
 
   /* 單列驗證：回傳 { row, errs }；整列空白回傳 null（自動略過、不報錯）。
      一列可能同時違反多條規則，全部收集起來顯示，使用者才不用修一次上傳一次。 */
-  function validateImportRow(cells, seenAccounts) {
+  function validateImportRow(cells, seen) {
     const c = IMPORT_HEADERS.map(function (_, i) { return importCell(cells[i]); });
     if (c.every(function (v) { return v === ""; })) return null;
 
@@ -3416,8 +3452,8 @@
     else if (!/^[A-Za-z0-9]+$/.test(row.account)) errs.push(IMPORT_MSG_ACCOUNT);
     else if (row.account.length > 50) errs.push(IMPORT_MSG_ACCOUNT);
     else if (ACCOUNTS.some(function (a) { return a.account.toLowerCase() === row.account.toLowerCase(); })) errs.push("帳號已存在");
-    else if (seenAccounts[row.account.toLowerCase()]) errs.push("檔案內有重複的帳號");
-    if (row.account) seenAccounts[row.account.toLowerCase()] = true;
+    else if (seen.accounts[row.account.toLowerCase()]) errs.push("檔案內有重複的帳號");
+    if (row.account) seen.accounts[row.account.toLowerCase()] = true;
 
     // 姓名
     if (!row.name) errs.push("姓名為必填");
@@ -3443,7 +3479,16 @@
     if (!row.dial) errs.push("國碼為必填");
     else if (!importIsValidDial(row.dial)) errs.push("無效的國碼");
     if (!row.phone) errs.push("手機為必填");
-    else if (row.dial && importIsValidDial(row.dial) && !importPhoneOk(row.dial, row.phone)) errs.push("手機格式錯誤");
+    else if (row.dial && importIsValidDial(row.dial) && !phoneFormatOk(row.dial, row.phone)) errs.push("手機格式錯誤");
+    else if (row.dial && importIsValidDial(row.dial)) {
+      /* 一個手機號碼只能綁一個帳號——比照帳號欄的兩層檢查：先比系統裡既有的帳號，
+         再比同一份檔案內部（檔案自己重複的話兩筆都進不去，光比系統是抓不到的）。
+         國碼無效時不做這層，避免同一格同時噴「無效的國碼」跟「已被使用」兩種錯。 */
+      const pk = phoneKeyFromDial(row.dial, row.phone);
+      if (ACCOUNTS.some(function (a) { return phoneKey(a.countryIso, a.phone) === pk; })) errs.push("手機號碼已被使用");
+      else if (seen.phones[pk]) errs.push("檔案內有重複的手機號碼");
+      seen.phones[pk] = true;
+    }
 
     // 電子信箱
     if (!row.email) errs.push("電子信箱為必填");
@@ -3475,7 +3520,7 @@
       } };
     }
     const body = sheetRows.slice(1);
-    const seen = {};
+    const seen = { accounts: {}, phones: {} };
     const rows = [];
     for (let i = 0; i < body.length; i++) {
       const r = validateImportRow(body[i], seen);
@@ -4066,7 +4111,9 @@
     const isAdmin = state.demoRole === "companyAdmin";
     const roleChoices = allowedRoleOptions();
     const scopedDepts = DEPARTMENTS.filter(function (d) { return isAdmin || d.id === DEMO_DEPT_FOR_MANAGER; });
-    const defaultDept = isAdmin ? scopedDepts[0].id : DEMO_DEPT_FOR_MANAGER;
+    // 防呆：入口已經有 requestNewAccount 擋著，這裡再判一次空陣列——日後多一個
+    // 呼叫點忘了擋，最壞只是部門下拉空白，不會像原本那樣整個 TypeError 開不起來
+    const defaultDept = isAdmin ? (scopedDepts[0] ? scopedDepts[0].id : null) : DEMO_DEPT_FOR_MANAGER;
 
     const deptOptions = scopedDepts.map(function (d) { return { value: d.id, label: d.name }; });
     const initialDept = acct ? acct.deptId : defaultDept;
@@ -4092,11 +4139,16 @@
     html += '</div>';
     html += '<div id="permPreviewWrap">' + renderPermPreview(initialRole) + '</div>';
     html += field("name", "姓名", true, '<input type="text" id="fName" maxlength="50" value="' + escAttr(acct ? acct.name : "") + '">');
-    html += '<div class="field-row">';
-    html += field("pwd", isEdit ? "重設密碼" : "設定密碼", !isEdit, '<input type="password" id="fPwd" maxlength="16" autocomplete="new-password">');
-    html += field("pwd2", "再次確認", !isEdit, '<input type="password" id="fPwd2" maxlength="16" autocomplete="new-password">');
-    html += '</div>';
-    html += '<div class="hint" style="margin:-10px 0 16px">長度 8–16 碼，須英數字混合並包含大寫及小寫英文字母' + (isEdit ? '；留空表示不變更密碼' : '') + '</div>';
+    // 2026-08-19（PM 裁定）：密碼只在「新增」時由母帳號設定，編輯抽屜不做重設密碼，
+    // 所以整段（兩個密碼欄＋規則說明）只在新增情境畫出來。編輯時連 DOM 都不存在，
+    // 下面 saveAccountFromDrawer 讀值處要一併判空。
+    if (!isEdit) {
+      html += '<div class="field-row">';
+      html += field("pwd", "設定密碼", true, '<input type="password" id="fPwd" maxlength="16" autocomplete="new-password">');
+      html += field("pwd2", "再次確認", true, '<input type="password" id="fPwd2" maxlength="16" autocomplete="new-password">');
+      html += '</div>';
+      html += '<div class="hint" style="margin:-10px 0 16px">長度 8–16 碼，須英數字混合並包含大寫及小寫英文字母</div>';
+    }
     html += field("empNo", "員工編號", false, '<input type="text" id="fEmpNo" maxlength="50" value="' + escAttr(acct ? acct.empNo : "") + '">');
     html += '<div class="field-group" data-field="phone"><label>手機<span class="req">*</span></label><div class="field-row">' +
       '<div style="flex:1.5">' + renderDropdown("fCountry", countryOptions, initialCountry, {
@@ -4151,8 +4203,11 @@
     const deptVal = ddValue("fDept");
     const roleVal = ddValue("fRole");
     const nameVal = document.getElementById("fName").value.trim();
-    const pwdVal = document.getElementById("fPwd").value;
-    const pwd2Val = document.getElementById("fPwd2").value;
+    // 編輯情境沒有密碼欄（PM 裁定編輯頁不重設密碼），DOM 不存在時取空字串避免炸掉
+    const pwdEl = document.getElementById("fPwd");
+    const pwd2El = document.getElementById("fPwd2");
+    const pwdVal = pwdEl ? pwdEl.value : "";
+    const pwd2Val = pwd2El ? pwd2El.value : "";
     const empNoVal = document.getElementById("fEmpNo").value.trim();
     const countryVal = ddValue("fCountry");
     const phoneVal = document.getElementById("fPhone").value.trim();
@@ -4179,13 +4234,23 @@
     if (!nameVal) { setFieldError("name", "請輸入姓名"); hasError = true; }
     if (!deptVal) { setFieldError("dept", "請選擇部門"); hasError = true; }
     if (!roleVal) { setFieldError("role", "請選擇角色"); hasError = true; }
-    if (!isEdit || pwdVal || pwd2Val) {
-      if (!isEdit && !pwdVal) { setFieldError("pwd", "請設定密碼"); hasError = true; }
-      else if (pwdVal && !pwdRe.test(pwdVal)) { setFieldError("pwd", "密碼須為 8–16 碼英數混合，含大小寫"); hasError = true; }
+    if (!isEdit) {
+      if (!pwdVal) { setFieldError("pwd", "請設定密碼"); hasError = true; }
+      else if (!pwdRe.test(pwdVal)) { setFieldError("pwd", "密碼須為 8–16 碼英數混合，含大小寫"); hasError = true; }
       if (pwdVal !== pwd2Val) { setFieldError("pwd2", "兩次密碼輸入不一致"); hasError = true; }
     }
     // 2026-08-12：舊 e8d 這兩欄是必填，補上（原本只有格式沒有必填）
     if (!phoneVal) { setFieldError("phone", "請輸入手機號碼"); hasError = true; }
+    /* 格式必須排在重複檢查前面：phoneKey 會把非數字全部濾掉，「abc」正規化後是空字串，
+       兩個亂打的帳號會互相被判成「同一支號碼」。先擋格式，非號碼就進不到比對那關。
+       規則跟匯入共用同一支 phoneFormatOk（見上方），不另立一套。 */
+    else if (!phoneFormatOk(dialFor(countryVal), phoneVal)) { setFieldError("phone", "手機格式錯誤"); hasError = true; }
+    // 一個手機號碼只能綁一個帳號（2026-08-19 產品規則）。新增時 orgState.editingId 是 null，
+    // 不會等於任何帳號 id，等於整份 ACCOUNTS 都納入比對；編輯時自動排除自己，號碼沒改也不會
+    // 被自己擋下。停用中的帳號照樣算佔用（Alvie 2026-08-19 裁定：停用不釋放號碼）。
+    else if (ACCOUNTS.some(function (a) {
+      return a.id !== orgState.editingId && phoneKey(a.countryIso, a.phone) === phoneKey(countryVal, phoneVal);
+    })) { setFieldError("phone", "此手機號碼已被使用"); hasError = true; }
     if (!emailVal) { setFieldError("email", "請輸入電子信箱"); hasError = true; }
     else if (!emailRe.test(emailVal)) { setFieldError("email", "請輸入正確的 E-mail 格式"); hasError = true; }
     if (hasError) return;
@@ -4193,13 +4258,14 @@
     if (isEdit) {
       const acct = ACCOUNTS.find(function (a) { return a.id === orgState.editingId; });
       acct.account = accountVal; acct.deptId = deptVal; acct.role = roleVal; acct.name = nameVal;
-      acct.empNo = empNoVal; acct.countryIso = countryVal; acct.phone = phoneVal; acct.email = emailVal;
+      acct.empNo = empNoVal; acct.countryIso = countryVal; acct.phone = normalizePhoneInput(countryVal, phoneVal); acct.email = emailVal;
       acct.intlSms = intlSmsVal; acct.status = enabledVal ? "active" : "disabled";
       showToast("已儲存「" + nameVal + "」的變更");
     } else {
       ACCOUNTS.push({
         id: "a" + (nextAccountSeq++), status: enabledVal ? "active" : "disabled", name: nameVal, account: accountVal,
-        deptId: deptVal, role: roleVal, empNo: empNoVal, countryIso: countryVal, phone: phoneVal, email: emailVal, intlSms: intlSmsVal
+        deptId: deptVal, role: roleVal, empNo: empNoVal, countryIso: countryVal,
+        phone: normalizePhoneInput(countryVal, phoneVal), email: emailVal, intlSms: intlSmsVal
       });
       showToast("已建立帳號「" + nameVal + "」");
     }
@@ -4213,6 +4279,44 @@
   // ⚠️ 刪除是硬刪還是改停用還沒跟 PM 確認，所以帳號這條路徑 runConfirm() 只做二次確認 UI 本身、
   // 不真的動資料——department 分支不在這次調整範圍內，維持既有的真刪除行為。
   // 2026-08-14：這件事原本在 modal 裡有一塊黃框 TODO 寫給看原型的人，Alvie 決定拿掉，改口頭說明
+  /* 「還沒有任何部門」的擋門（2026-08-19 產品規則：新增帳號一定要指定部門，
+     所以系統裡至少要先有一個部門）。原本 openAccountDrawer 會在 scopedDepts[0].id
+     直接丟 TypeError、抽屜整個開不起來、畫面毫無回饋，等於按了像壞掉。
+     擋在入口而不是把按鈕 disabled：disabled 只告訴使用者「不能按」，不會告訴他
+     去哪裡解決，而且這頁沒有 tooltip 元件（要新做就變成擴充設計系統）。
+     殼沿用刪除確認的 .confirm-modal／.cm-foot，沒有新樣式。 */
+  function hasAnyDeptInScope() {
+    if (state.demoRole === "companyAdmin") return DEPARTMENTS.length > 0;
+    return DEPARTMENTS.some(function (d) { return d.id === DEMO_DEPT_FOR_MANAGER; });
+  }
+  function openNoDeptModal(action) {
+    // 只有企業管理員能建部門，所以只有他拿得到「前往部門管理」這顆 CTA；
+    // 部門管理員點過去也是唯讀，給了反而更困惑，改成單一「知道了」收掉
+    const isAdmin = state.demoRole === "companyAdmin";
+    const body = action === "import"
+      ? "匯入的每一筆帳號都必須指定所屬部門，請先建立至少一個部門。"
+      : "新增帳號時必須指定所屬部門，請先建立至少一個部門。";
+    let foot = '<div class="cm-foot">';
+    foot += isAdmin
+      ? '<button class="btn btn-secondary" id="noDeptCancel">取消</button>' +
+        '<button class="btn btn-primary" id="noDeptGo">前往部門管理</button>'
+      : '<button class="btn btn-primary" id="noDeptCancel">知道了</button>';
+    foot += '</div>';
+    const html = '<div class="confirm-modal"><h3>尚未建立部門</h3><p>' + body + '</p>' + foot + '</div>';
+    const mask = document.getElementById("orgConfirmMask");
+    mask.innerHTML = html;
+    mask.classList.add("open");
+    document.getElementById("noDeptCancel").addEventListener("click", closeConfirm);
+    const go = document.getElementById("noDeptGo");
+    if (go) go.addEventListener("click", function () {
+      closeConfirm();
+      // 切頁沿用側欄 [data-child] 的既有作法：改 state 再 render()，不另外寫一套導覽
+      state.activeTop = "org";
+      state.activeChildId = "org-departments";
+      state.activeTabIndex = 0;
+      render();
+    });
+  }
   function openConfirm(id, kind) {
     orgState.pendingConfirm = { id: id, kind: kind };
     let title, body;
