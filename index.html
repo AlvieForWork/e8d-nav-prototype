@@ -4632,9 +4632,15 @@
     { min: 75000, actor: "emma", cat: "permission", action: "調整權限設定", target: "lily.wu", desc: "變更欄位：可用功能範圍" },
     { min: 95000, actor: "david.lin", cat: "data", action: "匯出資料", target: null, desc: "發送查詢結果（不記錄匯出內容）" },
     { min: 120000, actor: "tina.hsu", cat: "identity", action: "登入成功", target: null, desc: "來源 IP 198.51.100.xxx（末段遮罩）" },
-    // ── 90 天以上（驗證「近 90 天」與「全部時間」的差別）──
+    // ── 30 天以上、1 年以內（驗證「近 30 天」與「近 1 年」的差別）──
     { min: 140000, actor: "emma", cat: "permission", action: "刪除子帳號", target: "old.chen", desc: "帳號已刪除，紀錄保留" },
-    { min: 160000, actor: "emma", cat: "identity", action: "登入成功", target: null, desc: "來源 IP 203.0.113.xxx（末段遮罩）" }
+    { min: 160000, actor: "emma", cat: "identity", action: "登入成功", target: null, desc: "來源 IP 203.0.113.xxx（末段遮罩）" },
+    /* ── 1 年以上（驗證「近 1 年」與「全部時間」的差別，2026-08-20 補）──
+       沒有這兩筆的話，最舊的紀錄是 111 天前，「近 1 年」與「全部時間」會得到
+       完全一樣的 39 筆，demo 點下去看不出這個選項在做什麼。
+       跟當初為了分辨兩個相鄰區間而補 140000、160000 那兩筆同一個道理 */
+    { min: 600000, actor: "david.lin", cat: "business", action: "儲值", target: null, desc: "50,000 點" },
+    { min: 700000, actor: "emma", cat: "permission", action: "新增子帳號", target: "tina.hsu", desc: "建立帳號並指派部門" }
   ];
 
   /* 新事件寫入 Audit Log（目前只有匯入會呼叫）。
@@ -4785,7 +4791,20 @@
     { value: "today", label: "今天" },
     { value: "7d", label: "近 7 天" },
     { value: "30d", label: "近 30 天" },
-    { value: "90d", label: "近 90 天" },
+    /* 2026-08-20：新增「近 1 年」，同時刪掉「近 90 天」。
+       稽核查詢常見的是「去年這個時候誰動了什麼」，30 天到「全部時間」之間跳太大。
+       值寫 365d，走 parseInt 那條既有邏輯，不用另外開分支。
+
+       刪 90 天而不是刪 30 天：30 天＝一個月，不用換算；90 天要先換算成「一季」才有意義，
+       而且真要查一季的人不會用「近 90 天」——季度有明確邊界（4/1–6/30），
+       往回推 90 天跟財務季對不齊，那種需求會走「自訂範圍」。
+       另外預設值就是 30d，刪 90 天不用動預設。
+
+       ⚠️ 待 PM 確認稽核紀錄的保留期，會影響這組級距：
+          保留 90 天 → 「近 1 年」與「全部時間」等價，該收掉一個
+          保留 1 年  → 同上
+          保留 1 年以上 → 現在這組才完整成立 */
+    { value: "365d", label: "近 1 年" },
     { value: "all", label: "全部時間" },
     // 2026-08-17：選了這個才會在篩選列展開 DateRangePicker（共用元件）
     { value: "custom", label: "自訂範圍" }
