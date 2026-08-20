@@ -439,8 +439,14 @@
   @media (max-width: 1100px) {
     .dash-grid > .span-3 { grid-column: span 6; }
     .dash-grid > .span-6 { grid-column: span 12; }
+    /* 寬版 KPI 例外：這裡維持兩張並排（span 6），跟窄版 KPI 在這個斷點的行為一致。
+       不加這條的話它會跟著 .span-6 掉成整列寬，兩張 KPI 上下疊成兩條長橫幅 */
+    .dash-grid > .stat-card.span-6 { grid-column: span 6; }
   }
-  @media (max-width: 600px) { .dash-grid > .span-3 { grid-column: span 12; } }
+  @media (max-width: 600px) {
+    .dash-grid > .span-3 { grid-column: span 12; }
+    .dash-grid > .stat-card.span-6 { grid-column: span 12; }
+  }
 
   .stat-card {
     background: var(--surface); border-radius: var(--radius-xl); padding: 22px 24px;
@@ -466,6 +472,29 @@
   .stat-card .s-delta.down { color: #EC2D30; background: #FFEBEE; }
   .stat-card .s-delta .ico { width: 10px; height: 10px; }
   .stat-card .s-compare { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 8px; }
+
+  /* ---- 寬版 KPI：沒有費率摘要卡的角色（部門管理員、一般使用者）2026-08-20 ----
+     費率卡只有企業管理員看得到。卡一消失，格線就從「3+3+6 / 6+6」變成
+     「3+3+6 / 6+空 6」——趨勢圖往上遞補，長條圖獨自留在第二列，右邊空一整半。
+     解法是讓 KPI 改佔 6 欄，兩張 KPI 與下方兩張圖上下對齊，空欄自然消失。
+
+     min-height 歸零：原本的 240 是為了「不被同列鄰居的高度牽著走」而設的地板值，
+     但寬版這一列只有兩張同構造的 KPI，高度本來就一致，留著地板值反而是撐出空白。
+     （這也是 Alvie 看到的那段空白的真正來源：KPI 被 370px 高的趨勢圖拉高，
+       而卡片內是 space-between，多出來的高度全部變成圖示與數字之間的空隙）
+
+     圖示改放左側：卡片寬度變成兩倍（1440 下約 580px），直式排列會讓左右都是空的。
+     ⚠️ 這是同一張卡的寬版排列，不是新元件——1100px 以下 KPI 本來就已經是 6 欄寬，
+        寬卡的情境既有，只是桌機版第一次用到 */
+  .dash-grid > .stat-card.span-6 {
+    flex-direction: row; align-items: center; justify-content: flex-start;
+    gap: var(--spacing-lg); min-height: 0;
+  }
+  .dash-grid > .stat-card.span-6 .s-body { flex: 1; min-width: 0; }
+  /* 漲跌徽章改成貼著數字（原本是 space-between 讓它靠卡片右緣）。
+     窄版 259px 時兩者相距 83px 還讀得出是一組；寬版 538px 會拉開到 298px，
+     徽章孤零零飄在右邊，跟它在描述的那個數字看起來沒關係了（實測值） */
+  .dash-grid > .stat-card.span-6 .s-row { justify-content: flex-start; gap: var(--spacing-md); }
   /* 1366 以下：「本月總發送量」的 12,480 加上漲跌徽章，實測只差 1px 就會把徽章擠到下一行，
      變成兩張 KPI 卡一張同行、一張換行（Alvie 2026-08-14 指出）。收緊 gap（10→8，順便回到
      4px grid）與徽章左右內距，把那 1px 讓出來，窄螢幕兩張卡才會長得一樣。
@@ -2017,13 +2046,15 @@
     });
   }
 
-  function buildStatCard(label, value, prev, prevLabel, iconName) {
+  // span：有費率摘要卡時是 span-3（3+3+6 排滿一列），沒有時改 span-6，
+  // 兩張 KPI 自成一列、與下方兩張圖左右對齊（樣式差異見 .dash-grid > .stat-card.span-6）
+  function buildStatCard(label, value, prev, prevLabel, iconName, span) {
     const delta = ((value - prev) / prev) * 100;
     const up = delta >= 0;
     const deltaStr = (up ? "+" : "") + delta.toFixed(1) + "%";
-    return '<div class="stat-card span-3">' +
+    return '<div class="stat-card ' + span + '">' +
       '<div class="s-icon">' + icon(iconName) + "</div>" +
-      "<div>" +
+      '<div class="s-body">' +
         '<div class="s-label">' + label + "</div>" +
         '<div class="s-row"><div class="s-value" data-target="' + value + '">0</div>' +
         '<span class="s-delta ' + (up ? "up" : "down") + '">' + icon(up ? "up" : "down") + deltaStr + "</span></div>" +
@@ -2032,8 +2063,11 @@
   }
 
   function renderDashboardHTML() {
-    const stats = buildStatCard("今日發送量", DASH.todaySent.value, DASH.todaySent.prev, DASH.todaySent.prevLabel, "send") +
-      buildStatCard("本月總發送量", DASH.monthSent.value, DASH.monthSent.prev, DASH.monthSent.prevLabel, "stackedMail");
+    // 費率／合約摘要卡只有企業管理員看得到，KPI 的欄寬要跟著它在不在走
+    const showContractCard = state.demoRole === "companyAdmin";
+    const statSpan = showContractCard ? "span-3" : "span-6";
+    const stats = buildStatCard("今日發送量", DASH.todaySent.value, DASH.todaySent.prev, DASH.todaySent.prevLabel, "send", statSpan) +
+      buildStatCard("本月總發送量", DASH.monthSent.value, DASH.monthSent.prev, DASH.monthSent.prevLabel, "stackedMail", statSpan);
 
     const periods = [{ key: "week", label: "本週" }, { key: "month", label: "本月" }, { key: "quarter", label: "本季" }];
     const periodTabs = periods.map(function (p) {
@@ -2043,7 +2077,7 @@
     // 合約摘要卡僅企業管理員可見（2026-08-14 補上這個 gating，
     // 之前程式碼漏了這條，三種身份都看得到，跟合約狀態 demo 切換的設計前提對不上）
     let contractCardHTML = "";
-    if (state.demoRole === "companyAdmin") {
+    if (showContractCard) {
       const hasContract = state.demoContract === "yes";
       const cData = hasContract ? DASH.contract.yes : DASH.contract.no;
       // 有 range 的列＝單價，級距標在價格左邊、同一行右對齊（摘要只給第一級距）
